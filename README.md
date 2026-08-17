@@ -1,0 +1,229 @@
+# pokeca-profit-tool（ポケカ海外販売 利益判定ツール）
+
+日本で仕入れたポケモンカードを eBay など海外で販売した場合の**予想利益**・**利益率**を
+自動計算し、「仕入れ候補 / 検討 / 見送り」を判定するローカルツールです。
+
+> ⚠️ 価格は常に変動します。本ツールの数値は入力データと設定値に基づく **「予想」** であり、
+> 利益を保証するものではありません。
+
+---
+
+## できること（MVP）
+
+- カード登録（名前・番号・セット・レアリティ・言語・状態・画像URL・仕入価格・仕入先・購入日・在庫）
+- 販売シナリオ入力（販売価格USD・為替・国際送料）
+- 利益計算（売上 − eBay/決済/為替手数料 − 送料 − 梱包費 − その他 − 仕入 ＝ 予想利益）と利益率
+- 仕入れ判定（利益率しきい値・最低利益額。**設定から変更可能**）
+- 仕入れおすすめ度（0〜100点）
+- ダッシュボード一覧（利益率・利益額・おすすめ度で並べ替え）
+- 検索（キーワード・仕入価格帯・利益率・利益額・判定）
+- CSV出力（現在の検索条件・並び順を反映、Excel対応のBOM付き）
+- 設定画面（手数料率・既定為替・判定しきい値・梱包費など）
+
+---
+
+## 技術構成
+
+| 種類 | 採用技術 |
+|---|---|
+| フレームワーク | Next.js 16（App Router / Server Actions）+ TypeScript |
+| スタイル | Tailwind CSS 4 |
+| データベース | SQLite（ファイル1個）+ Prisma 7（driver adapter: better-sqlite3）|
+| 入力検証 | zod |
+| テスト | Vitest（計算・検証・CSVの単体テスト）|
+
+すべてローカルで完結し、外部サーバーは不要です。MVP は外部 API なしで動作します。
+
+---
+
+## セットアップ
+
+前提: Node.js 18 以上（推奨 20+）。このマシンは v24 で確認済み。
+
+```bash
+# 1. 依存関係をインストール
+npm install
+
+# 2. 環境変数ファイルを用意
+cp .env.example .env
+
+# 3. データベースを作成（Prisma マイグレーション）
+npm run db:migrate
+```
+
+## 起動
+
+```bash
+# 開発サーバー（既定ポート 3000）
+npm run dev
+```
+
+ブラウザで http://localhost:3000 を開きます。
+（ポートを変えたい場合は `npm run dev -- --port 3100` のように指定）
+
+| コマンド | 内容 |
+|---|---|
+| `npm run dev` | 開発サーバー起動 |
+| `npm run build` / `npm run start` | 本番ビルド / 起動 |
+| `npm test` | 単体テスト実行 |
+| `npm run db:migrate` | マイグレーション適用 |
+| `npm run db:studio` | Prisma Studio（DBをGUIで閲覧）|
+| `npm run lint` | Lint |
+
+---
+
+## 公開デモ（人に見せる用）
+
+手元の在庫データ（`dev.db`）とは別に、**サンプルデータだけが入ったデモ版**を動かせます。
+仕事の相談相手にURLを渡して触ってもらう、といった用途向け。
+
+```bash
+# デモ用DBを作り直す（prisma/demo.db。dev.db には触れません）
+node scripts/seed-demo.mjs
+
+# デモと同じ状態でローカル起動（既定ポート 4400）
+./scripts/dev-demo.sh
+```
+
+仕組み：`DEMO_MODE=1` のとき、`prisma/demo.db` を `/tmp` にコピーしてそちらを使います
+（`src/lib/demoDb.ts`）。
+
+- 見に来た人が登録・編集・削除を**実際に試せる**
+- サーバーが入れ替わると自動的に初期状態へ戻るので、荒らされても残らない
+- 外部DBサービスの契約が不要
+
+デモ表示を初期状態に戻したいとき：
+
+```bash
+rm -rf "${TMPDIR:-/tmp}/pokeca-demo"
+```
+
+Vercel などに公開する場合は、環境変数に `DEMO_MODE=1` を設定してください。
+設定しなければ従来どおり `DATABASE_URL`（`dev.db`）を見ます。
+
+---
+
+## 使い方
+
+1. 右上の「＋ カードを登録」からカードと販売シナリオ（販売価格USD・為替・送料）を入力。
+2. 登録直後に予想利益・利益率・判定・おすすめ度がプレビュー表示されます。
+3. ダッシュボードで一覧・並べ替え・検索。列見出しクリックで並べ替え。
+4. 「設定」で手数料率や判定しきい値を調整（全カードに即反映）。
+5. 「CSV出力」で分析結果をダウンロード（絞り込み・並び順が反映されます）。
+
+---
+
+## プロジェクト構成
+
+```
+src/
+├─ app/
+│  ├─ page.tsx              … ダッシュボード（一覧・並べ替え・検索・CSV導線）
+│  ├─ SearchBar.tsx         … 検索フォーム
+│  ├─ error.tsx / not-found.tsx … エラー・404 画面
+│  ├─ cards/new/            … カード登録フォーム＋Server Action
+│  ├─ settings/             … 設定画面＋Server Action
+│  └─ api/export/route.ts   … CSV エクスポート
+├─ lib/
+│  ├─ profit.ts             … 利益・利益率・判定・スコア（純粋関数）
+│  ├─ shipping.ts           … 送料計算（日本郵便・DDP）
+│  ├─ cardProfit.ts         … カード＋設定 → 利益（ブリッジ）
+│  ├─ dashboard.ts          … 行構築・並べ替え・クエリ結合
+│  ├─ search.ts             … 検索条件の解釈・絞り込み
+│  ├─ validation.ts         … カード入力の検証（zod）
+│  ├─ settingsValidation.ts … 設定入力の検証（zod）
+│  ├─ settings.ts           … 設定の取得・更新（無ければ既定値で自動作成）
+│  ├─ csv.ts / format.ts    … CSV生成・表示整形
+│  └─ prisma.ts / logger.ts … DB クライアント / ログ
+└─ generated/prisma/        … Prisma が生成（コミットしない）
+prisma/schema.prisma        … DB スキーマ（Card / Settings / PriceHistory）
+```
+
+各機能は純粋関数（`lib/*`）と画面（`app/*`）を分離し、計算ロジックは単体テストで担保しています。
+
+---
+
+## エラー処理・ログ
+
+- API/DB/為替取得の失敗、ネットワークエラー、不正な価格入力、空欄、タイムアウト等で
+  **アプリが落ちない**よう、各所で例外を握ってユーザーに分かりやすい文言を表示します。
+- サーバー側の想定外エラーは `logs/app.log` に追記します（`logs/` は Git 管理外）。
+- 画面の想定外エラーは `src/app/error.tsx` が受け止め、再試行ボタンを表示します。
+
+---
+
+## 環境変数 / API キー
+
+MVP は**外部 API キー不要**で動作します。必要な変数は `.env.example` を参照。
+
+| 変数名 | 用途 | 必須 | 取得先 |
+|---|---|---|---|
+| `DATABASE_URL` | SQLite の場所 | ✅ MVP必須 | 既定 `file:./dev.db` のままでOK |
+| `EBAY_APP_ID` / `EBAY_CERT_ID` | eBay 出品価格リサーチ | 任意 | https://developer.ebay.com/ |
+| `EBAY_MARKETPLACE_ID` | 検索対象マーケット | 任意 | 既定 `EBAY_US` |
+| `POKEMONTCG_API_KEY` | カード情報の取得 | ⬜ 将来 | https://pokemontcg.io/ |
+
+> 🔐 API キー等の秘密情報はソースに書かず、必ず `.env` に記載します（`.env` はコミットされません）。
+> 為替の自動取得（Frankfurter）はキー不要で動作します。
+
+### eBay 出品価格リサーチのセットアップ（任意）
+
+カード登録・編集画面の「eBay 出品価格リサーチ」で、eBay の**出品中の価格**（最安/平均/最高/件数）を
+検索できます。未設定でもアプリは動作し、画面が設定手順を案内します。
+
+1. https://developer.ebay.com/ に無料登録し、アプリkeyを作成（Production）
+2. **App ID (Client ID)** と **Cert ID (Client Secret)** を控える
+3. `.env` に設定:
+   ```
+   EBAY_APP_ID="（App ID）"
+   EBAY_CERT_ID="（Cert ID）"
+   EBAY_MARKETPLACE_ID="EBAY_US"
+   ```
+4. 開発サーバーを再起動
+
+> ⚠️ Browse API で取得できるのは「**出品中の価格**（asking）」です。スクレイピングは行いません。
+
+### 実売価格（落札実績）を使う — Marketplace Insights API の申請
+
+リサーチ枠の「**実売価格**」タブは、eBay の **Marketplace Insights API** で落札実績を取得します。
+これは **Limited Release**（申請・審査が必要）で、承認されるまでは画面が「申請が必要」と案内します。
+
+1. https://developer.ebay.com/ にサインイン
+2. [Marketplace Insights API の概要・申請](https://developer.ebay.com/api-docs/buy/marketplace-insights/overview.html) から
+   利用申請（Application Growth Check / Limited Release 申請）を行う
+3. 承認されると、既存の `EBAY_APP_ID` / `EBAY_CERT_ID` に
+   `buy.marketplace.insights` スコープが付与され、**設定変更なしでそのまま実売価格を取得できる**
+4. 承認前でも「出品価格」タブは利用可能
+
+> 実装は承認時に自動で有効化されます（未承認は `not_approved` として案内、認証なしは `no_credentials`）。
+> スコープ未付与（invalid_scope）や 403 を検出して「申請が必要」を表示します。
+
+---
+
+## 開発ステータス（MVP：完了）
+
+- [x] 手順1: プロジェクト雛形＋SQLite＋.env.example＋README初版
+- [x] 手順2: DBスキーマ＋設定初期化
+- [x] 手順3: 利益計算ロジック＋テスト
+- [x] 手順4: 送料計算の移植＋テスト
+- [x] 手順5: カード登録フォーム＋保存
+- [x] 手順6: ダッシュボード一覧（ソート）
+- [x] 手順7: 検索
+- [x] 手順8: 設定画面
+- [x] 手順9: CSV出力
+- [x] 手順10: エラー処理・ログ・バリデーション仕上げ
+
+## 将来の拡張（MVP対象外）
+
+為替の自動取得 / eBay 実売価格の取得（出品価格と実売の区別）/ カード情報 API 連携 /
+価格履歴（`PriceHistory` テーブルは用意済み）と推移グラフ / 条件通知。
+
+外部データ取得は **API を優先**し、各サービスの利用規約・robots.txt・API 利用条件を
+確認したうえで、規約違反となるスクレイピングは行いません。実装前に各サービスの
+最新の提供状況・料金・無料枠を必ず再確認してください。
+
+## 送料・関税の前提（要確認）
+
+送料計算は 2026.6.1 改定の日本郵便・国際エアパケット（米国宛）と、
+Section 301 関税（日本原産 12.5%）の立替（DDP）を前提にしています。
+料金・関税・手数料は改定されうるため、実運用前に公式情報を確認してください。

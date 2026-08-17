@@ -1,0 +1,129 @@
+// Prisma スキーマ
+// 参考: https://pris.ly/d/prisma-schema
+//
+// DB は SQLite（ローカルファイル1個）。接続先は prisma.config.ts が
+// 環境変数 DATABASE_URL（.env）から読み込む。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// -----------------------------------------------------------------------------
+// Card: カード情報 ＋ 仕入れ情報 ＋ 現在の販売シナリオ入力
+//   MVPでは「今この価格で売ったら？」を1枚ごとに計算するため、
+//   販売価格・為替・送料などの可変入力もこの行に持たせる（シンプル優先）。
+//   時系列の記録は PriceHistory に保存する。
+// -----------------------------------------------------------------------------
+model Card {
+  id Int @id @default(autoincrement())
+
+  // --- カード基本情報 ---
+  name       String // カード名（必須）
+  cardNumber String? // カード番号（例: 025/165）
+  setName    String? // セット名
+  rarity     String? // レアリティ
+  language   String  @default("JP") // 言語（JP / EN など）
+  condition  String  @default("NM") // コンディション（NM / LP / PSA10 など）
+  imageUrl   String? // カード画像URL
+
+  // --- 仕入れ情報 ---
+  purchasePriceJpy Int // 仕入れ価格（円）
+  supplier         String? // 仕入れ先
+  purchasedAt      DateTime? // 購入日
+  stock            Int       @default(1) // 在庫数
+
+  // --- 現在の販売シナリオ入力（利益計算に使用）---
+  sellPriceUsd       Float  @default(0) // 想定販売価格（USD・商品本体）
+  shippingChargedUsd Float  @default(0) // 購入者に請求する送料（USD）。0=送料無料
+  fxRate             Float? // 為替レート（円/USD）。null なら設定の既定値を使用
+  shippingJpy        Int    @default(0) // 出品者が払う国際送料（円・素体）
+  gradedShippingJpy  Int    @default(0) // 鑑定スラブの国際送料（円）。0=素体送料を流用
+  weightGrams        Int? // 梱包後重量（g）。送料自動計算に使用
+
+  // --- PSA鑑定シナリオ（生カードを鑑定して売る想定）---
+  psa10SellUsd Float  @default(0) // PSA10 時の販売価格（USD）
+  psa9SellUsd  Float  @default(0) // PSA9以下 時の販売価格（USD）
+  psa10Prob    Float  @default(0) // PSA10 になる確率(%)。0なら鑑定シナリオ未設定扱い
+  gradingPlan  String @default("REGULAR") // 鑑定プラン: REGULAR / EXPRESS
+
+  // --- 販売ステータス・実績 ---
+  status      String    @default("STOCK") // STOCK(仕入済) / LISTED(出品中) / SOLD(売却済)
+  soldPriceUsd Float    @default(0) // 実際に売れた価格（USD）
+  soldAt      DateTime? // 売却日
+
+  // --- メモ・タグ ---
+  notes String? // 自由メモ
+  tags  String? // タグ（カンマ区切り）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  priceHistory PriceHistory[]
+
+  @@index([name])
+  @@index([setName])
+}
+
+// -----------------------------------------------------------------------------
+// Settings: 全体設定（1行のみ。id = 1 固定で運用）
+//   手数料率や判定しきい値など、カード横断で使う設定値。
+//   ソースに数値を埋め込まず、ここから変更できるようにする。
+// -----------------------------------------------------------------------------
+model Settings {
+  id Int @id @default(1)
+
+  // --- 手数料・経費（利益計算で使用）---
+  ebayFeePct     Float @default(0.13) // eBay 販売手数料率（0.13 = 13%）
+  ebayFixedFeeUsd Float @default(0.4) // eBay 1注文あたり定額手数料（USD）
+  paymentFeePct  Float @default(0.03) // 決済手数料率（マネージドペイメントでは0推奨）
+  fxFeePct       Float @default(0.02) // 為替/国際手数料率
+  tariffRatePct  Float @default(0) // 関税率(%)。米国DDP等。0=なし（例: 日本原産12.5）
+  packingJpy     Int   @default(200) // 梱包費（円）
+  otherFeeJpy    Int   @default(0) // その他手数料（円）
+
+  // --- 為替 ---
+  defaultFxRate   Float     @default(150) // 既定の為替レート（円/USD）
+  autoFxUpdate    Boolean   @default(false) // 起動時に為替を自動更新するか
+  lastFxUpdatedAt DateTime? // 為替を自動更新した最終日時
+
+  // --- 仕入れ判定のしきい値（利益率 % で指定）---
+  thresholdBuyPct      Float @default(30) // これ以上 → 仕入れ候補
+  thresholdConsiderPct Float @default(20) // これ以上 → 検討（未満 → 見送り）
+  minProfitJpy         Int   @default(0) // 最低利益額（円）。下回れば判定を下げる
+
+  // --- 通知（アラート）のしきい値 ---
+  notifyProfitRatePct  Float @default(30) // この利益率以上でアラート
+  notifyPriceChangePct Float @default(10) // 価格がこの%以上変動したらアラート
+
+  // --- PSA鑑定コスト（既定値。生→鑑定→販売の利益計算に使用）---
+  gradingFeeRegularUsd Float @default(79.99) // PSA鑑定料 レギュラー（USD・1枚。2026-08時点の公表料金）
+  gradingFeeExpressUsd Float @default(149) // PSA鑑定料 エクスプレス（USD・1枚。2026-08時点）
+  gradingShipJpy       Int   @default(2000) // 鑑定の往復送料（円）
+  gradingAgentJpy      Int   @default(1000) // 代行手数料（円）
+
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// PriceHistory: 価格の時系列記録（将来の推移グラフ用）
+//   MVPでは書き込みは最小限。構造だけ用意しておく。
+// -----------------------------------------------------------------------------
+model PriceHistory {
+  id     Int  @id @default(autoincrement())
+  card   Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  cardId Int
+
+  recordedAt       DateTime @default(now())
+  purchasePriceJpy Int
+  sellPriceUsd     Float
+  fxRate           Float
+  profitJpy        Int
+  profitRate       Float
+
+  @@index([cardId, recordedAt])
+}

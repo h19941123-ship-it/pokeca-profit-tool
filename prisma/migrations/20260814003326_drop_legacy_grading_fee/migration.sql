@@ -1,0 +1,11 @@
+-- レガシー列 "gradingFeeUsd" の削除。
+--
+-- この列は 20260813161332_status_sold_notes_tags_fxauto が Settings を
+-- 作り直す際に既に落としている。ファイル名の日付順（= 新規DBへの適用順）では
+-- そちらが先に走るため、ここで DROP COLUMN すると
+-- 「no such column: gradingFeeUsd」で必ず失敗していた。
+-- 手元の dev.db では適用順が逆だったため露見していなかっただけで、
+-- 新しい環境にインストールするとこの1行で止まる。
+--
+-- 実体としてやることは残っていないので、no-op にしてある。
+SELECT 1;
