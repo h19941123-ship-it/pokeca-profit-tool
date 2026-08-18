@@ -27,12 +27,20 @@
 
 ---
 
-## ステップ1：開発者アカウントを作る（すぐ完了・無料）
+## ステップ1：開発者アカウントを作る（無料・ただし審査待ちがある）
 
 1. <https://developer.ebay.com/> を開く
 2. 右上の **「Register」/「Join the developer program」** をクリック
 3. eBayアカウントでサインイン → **API利用規約（License Agreement）に同意**
 4. 確認メールが届くのでリンクを踏んで **メール認証**
+5. **登録内容の審査を待つ（最低1営業日）** ← 即時ではない
+
+> 📌 2026-08-18 実施時点の実際の挙動。
+> メール認証が済むと "Your registration has been submitted for review.
+> This usually takes at least one business day." と表示され、
+> **この時点ではまだログインできません**。
+> 承認されるとメールが届き、そこで初めてログイン → ステップ2に進めます。
+> 画面を開いたまま待つ必要はありません。
 
 ---
 
