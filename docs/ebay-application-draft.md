@@ -78,3 +78,70 @@ Thank you for reviewing my request.
 - [ ] Individual / Browse API / EBAY_US を選択した
 - [ ] 規約に同意して送信した
 - [ ] 承認メールを待つ（数日〜。来たら .env に鍵を設定）
+
+---
+
+# 【追記 2026-08-18】マーケットプレイス削除通知の「免除申請」
+
+Production キーセットを作ると、初期状態で **無効（disabled）** になっている。
+キー画面にこう出る：
+
+> Your keyset is currently disabled
+> Comply with marketplace deletion/account closure notification process
+> or apply for an exemption
+
+有効化するには次のどちらかが必要：
+
+1. eBayユーザーの退会通知を受け取る公開エンドポイントを実装する
+2. **免除（exemption）を申請する** ← このアプリはこちらに該当
+
+## なぜ免除に該当するか（コードで確認済み）
+
+| 確認項目 | 実際 |
+|---|---|
+| eBayのデータをDBに保存しているか | **していない**（`src/lib/ebay.ts` に prisma への書き込みなし） |
+| 取得しているフィールド | `title` / `price` / `currency` / `condition` のみ |
+| eBayユーザーの個人データ | **一切取得していない**（出品者名・購入者情報などを読んでいない） |
+| `Card` テーブルの eBay 由来の列 | **なし**（手数料率の設定値だけ） |
+| 保持期間 | 画面表示のみ。リロードで消える |
+
+つまり「削除通知を受け取って消すべきユーザーデータ」を最初から持っていない。
+
+## そのまま貼れる英文（免除の理由）
+
+```
+Reason for exemption request:
+
+My application does not store, cache, or persist any eBay user data.
+
+It is a personal, non-commercial tool that helps me (an individual reseller)
+decide whether a trading card can be resold profitably overseas. When I enter
+a card name, the application calls the Browse API (item_summary/search) and
+displays a transient summary of ACTIVE listing prices — item title, price,
+currency, and condition only.
+
+Specifically:
+- No eBay data is written to any database or file. The results exist only in
+  the rendered page and disappear on reload.
+- I do not request, receive, or store any eBay user personal data (no seller
+  or buyer names, addresses, emails, or account identifiers).
+- I do not redistribute, publish, or share eBay data with third parties.
+- The tool is used only by me, on my own machine.
+
+Because the application holds no eBay user data at any time, there is nothing
+to delete in response to a marketplace account deletion notification.
+
+Estimated call volume: under 1,000 calls per day.
+Marketplace: eBay US (EBAY_US).
+Application type: Individual, personal use.
+```
+
+## フォームで聞かれそうな項目 → 回答
+
+| 項目 | 回答 |
+|---|---|
+| Do you store eBay user data? | **No** |
+| Where is data stored? | **Nowhere — not persisted** |
+| Retention period | **None（画面表示のみ）** |
+| Do you share data with third parties? | **No** |
+| Application type | **Individual / personal use** |
