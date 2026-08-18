@@ -5,6 +5,7 @@
 // ※ 英語カードDBのため、検索は英語名（例: Charizard）が有効。
 
 import { useState } from "react";
+import { setInputValueByName } from "@/lib/setInputValue";
 
 const inputClass =
   "w-full rounded-md border border-black/15 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-white/20 dark:bg-black/20";
@@ -19,13 +20,9 @@ interface TcgCard {
   imageLarge: string | null;
 }
 
-/** 名前付き input/textarea に値を入れる（非制御なので直接代入）。 */
+/** 名前付き input/textarea に値を入れる（非制御フォーム）。 */
 function setField(name: string, value: string) {
-  const el = document.querySelector<HTMLInputElement>(`[name="${name}"]`);
-  if (el) {
-    el.value = value;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  }
+  setInputValueByName(name, value);
 }
 
 export function CardInfoLookup({ defaultQuery = "" }: { defaultQuery?: string }) {

@@ -46,6 +46,12 @@ export interface PriceSummary {
   min: number;
   max: number;
   avg: number;
+  /**
+   * 中央値。相場の目安としては平均・最安より信頼できる。
+   * 検索結果には状態の悪い品・別カード・まとめ売りが混ざるため、
+   * 最安は外れ値を拾いやすく、平均も高額出品に引きずられる。
+   */
+  median: number;
   currency: string;
 }
 
@@ -130,7 +136,16 @@ export function parseListings(json: unknown): EbayListing[] {
   return listings;
 }
 
-/** 出品リストから最安・最高・平均・件数を集計する純粋関数。 */
+/** 数値配列の中央値（偶数個なら中央2つの平均）。 */
+export function medianOf(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const m =
+    sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  return Math.round(m * 100) / 100;
+}
+
+/** 出品リストから最安・最高・平均・中央値・件数を集計する純粋関数。 */
 export function summarizePrices(listings: EbayListing[]): PriceSummary | null {
   if (listings.length === 0) return null;
   const values = listings.map((l) => l.priceValue);
@@ -140,6 +155,7 @@ export function summarizePrices(listings: EbayListing[]): PriceSummary | null {
     min: Math.min(...values),
     max: Math.max(...values),
     avg: Math.round((sum / values.length) * 100) / 100,
+    median: medianOf(values),
     currency: listings[0].currency,
   };
 }

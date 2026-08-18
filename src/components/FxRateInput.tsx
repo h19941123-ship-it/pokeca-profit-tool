@@ -3,8 +3,13 @@
 // 為替レート入力欄＋「現在レート取得」ボタン。
 // ボタンを押すと /api/fx から USD→JPY を取得して欄に反映する。
 // 取得に失敗しても、手動入力した値はそのまま使える（フォールバック）。
+//
+// 注意: この欄は制御コンポーネント（useState）なので、ボタンで値を変えても
+// DOM の input イベントは発火しない。親フォームは onInput でライブ判定を
+// 再計算しているため、そのままだと為替だけ古い値で計算され続ける。
+// 反映後に明示的に input イベントを飛ばして親に知らせる。
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const inputClass =
   "w-full rounded-md border border-black/15 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-white/20 dark:bg-black/20";
@@ -29,6 +34,15 @@ export function FxRateInput({
   const [value, setValue] = useState(defaultValue);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [info, setInfo] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  // ボタン取得で値を入れた回数。描画後に親へ通知するための合図。
+  const [fetchedCount, setFetchedCount] = useState(0);
+
+  // 描画が終わって DOM に新しい値が入ってから通知する（順序が逆だと親が旧値を読む）
+  useEffect(() => {
+    if (fetchedCount === 0) return;
+    inputRef.current?.dispatchEvent(new Event("input", { bubbles: true }));
+  }, [fetchedCount]);
 
   async function fetchRate() {
     setStatus("loading");
@@ -38,6 +52,7 @@ export function FxRateInput({
       const data: FxApiResult = await res.json();
       if (data.ok) {
         setValue(String(data.rate));
+        setFetchedCount((n) => n + 1);
         setStatus("idle");
         setInfo(`${data.date} 時点 / ${data.source}`);
       } else {
@@ -55,6 +70,7 @@ export function FxRateInput({
       <span className="text-sm font-medium">{label}</span>
       <div className="flex items-center gap-2">
         <input
+          ref={inputRef}
           name={name}
           type="number"
           min="0"

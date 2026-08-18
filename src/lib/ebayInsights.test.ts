@@ -27,13 +27,13 @@ describe("parseSoldItems", () => {
 });
 
 describe("summarizeSold", () => {
-  it("最安・最高・平均・件数を集計", () => {
+  it("最安・最高・平均・中央値・件数を集計", () => {
     const s = summarizeSold([
       { title: "a", priceValue: 80, currency: "USD", soldDate: null, url: null },
       { title: "b", priceValue: 100, currency: "USD", soldDate: null, url: null },
       { title: "c", priceValue: 120, currency: "USD", soldDate: null, url: null },
     ]);
-    expect(s).toEqual({ count: 3, min: 80, max: 120, avg: 100, currency: "USD" });
+    expect(s).toEqual({ count: 3, min: 80, max: 120, avg: 100, median: 100, currency: "USD" });
   });
 
   it("空なら null", () => {

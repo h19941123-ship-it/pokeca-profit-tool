@@ -14,6 +14,7 @@ import { EbayLookup } from "@/components/EbayLookup";
 import { CardInfoLookup } from "@/components/CardInfoLookup";
 import { LiveProfitPreview } from "@/components/LiveProfitPreview";
 import { estimateShippingJpy } from "@/lib/shipping";
+import { setInputValueByName } from "@/lib/setInputValue";
 import { yen, pct } from "@/lib/format";
 import {
   computePreview,
@@ -21,18 +22,9 @@ import {
   type PreviewResult,
 } from "@/lib/previewProfit";
 
-/** 名前付き input に値を入れる（非制御フォーム）。 */
-function setFieldValue(name: string, value: number) {
-  const el = document.querySelector<HTMLInputElement>(`[name="${name}"]`);
-  if (el) {
-    el.value = String(value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  }
-}
-
 /** 重量(g)から日本郵便の送料(円)を計算して対象欄に入れる。 */
 function fillShippingFromWeight(targetName: string, weightGrams: number) {
-  setFieldValue(targetName, estimateShippingJpy(weightGrams));
+  setInputValueByName(targetName, estimateShippingJpy(weightGrams));
 }
 
 const inputClass =
@@ -195,7 +187,7 @@ export function CardForm({
       )}
 
       {/* --- カード情報 --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">カード情報</legend>
         <CardInfoLookup defaultQuery={d.name ?? ""} />
         <Field label="カード名" required error={errors.name}>
@@ -234,7 +226,7 @@ export function CardForm({
       </fieldset>
 
       {/* --- 仕入れ情報 --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">仕入れ情報</legend>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="仕入れ価格（円）" required error={errors.purchasePriceJpy}>
@@ -268,7 +260,7 @@ export function CardForm({
       </fieldset>
 
       {/* --- 販売シナリオ --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">販売シナリオ（海外販売の想定）</legend>
         <EbayLookup defaultQuery={d.name ?? ""} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -305,7 +297,7 @@ export function CardForm({
       </fieldset>
 
       {/* --- PSA鑑定シナリオ --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">PSA鑑定シナリオ（任意）</legend>
         <p className="-mt-2 text-xs text-black/50 dark:text-white/50">
           素体を鑑定して売る想定。PSA価格を入れると詳細ページで「鑑定して売る」期待利益を計算します（鑑定料などは設定で調整）。

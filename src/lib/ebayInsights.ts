@@ -10,7 +10,7 @@
 // 環境変数は ebay.ts と共通（EBAY_APP_ID / EBAY_CERT_ID / EBAY_ENV / EBAY_MARKETPLACE_ID）。
 
 import { logger } from "@/lib/logger";
-import { hasEbayCredentials, type PriceSummary } from "@/lib/ebay";
+import { hasEbayCredentials, type PriceSummary, medianOf } from "@/lib/ebay";
 import { toMarketplaceId } from "@/lib/marketplaces";
 
 const TIMEOUT_MS = 8000;
@@ -126,6 +126,7 @@ export function summarizeSold(items: SoldItem[]): PriceSummary | null {
     min: Math.min(...values),
     max: Math.max(...values),
     avg: Math.round((sum / values.length) * 100) / 100,
+    median: medianOf(values),
     currency: items[0].currency,
   };
 }

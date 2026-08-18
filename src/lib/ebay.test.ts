@@ -28,13 +28,13 @@ describe("parseListings", () => {
 });
 
 describe("summarizePrices", () => {
-  it("最安・最高・平均・件数を集計", () => {
+  it("最安・最高・平均・中央値・件数を集計", () => {
     const s = summarizePrices([
       { title: "a", priceValue: 80, currency: "USD", condition: null, url: null },
       { title: "b", priceValue: 120, currency: "USD", condition: null, url: null },
       { title: "c", priceValue: 100, currency: "USD", condition: null, url: null },
     ]);
-    expect(s).toEqual({ count: 3, min: 80, max: 120, avg: 100, currency: "USD" });
+    expect(s).toEqual({ count: 3, min: 80, max: 120, avg: 100, median: 100, currency: "USD" });
   });
 
   it("空なら null", () => {
@@ -48,5 +48,44 @@ describe("summarizePrices", () => {
       { title: "c", priceValue: 11, currency: "USD", condition: null, url: null },
     ]);
     expect(s?.avg).toBe(10.33);
+  });
+});
+
+describe("summarizePrices の中央値", () => {
+  const listing = (priceValue: number) => ({
+    title: "t",
+    priceValue,
+    currency: "USD",
+    condition: null,
+    url: null,
+  });
+
+  it("奇数個は真ん中の値", () => {
+    const s = summarizePrices([10, 20, 100].map(listing))!;
+    expect(s.median).toBe(20);
+  });
+
+  it("偶数個は中央2つの平均", () => {
+    const s = summarizePrices([10, 20, 30, 100].map(listing))!;
+    expect(s.median).toBe(25);
+  });
+
+  it("並び順に依存しない", () => {
+    const a = summarizePrices([100, 10, 30, 20].map(listing))!;
+    const b = summarizePrices([10, 20, 30, 100].map(listing))!;
+    expect(a.median).toBe(b.median);
+  });
+
+  it("極端な安値の外れ値に引きずられない（最安・平均との違い）", () => {
+    // 実データ例: 最安$29.84 は状態の悪い品で、相場の目安にならない
+    const prices = [29.84, 176, 270, 300, 370, 400, 410, 440, 550, 690];
+    const s = summarizePrices(prices.map(listing))!;
+    expect(s.min).toBe(29.84); // 最安は外れ値のまま
+    expect(s.median).toBe(385); // 中央値は現実的な水準
+    expect(s.median).toBeGreaterThan(s.min * 5);
+  });
+
+  it("1件でも落ちない", () => {
+    expect(summarizePrices([listing(42)])!.median).toBe(42);
   });
 });

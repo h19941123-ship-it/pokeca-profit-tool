@@ -11,14 +11,11 @@ import {
 } from "@/app/settings/formState";
 import { FxRateInput } from "@/components/FxRateInput";
 import { GRADING_PRESETS, feeSpecToUsd, type GradingPreset } from "@/lib/gradingPresets";
+import { setInputValueByName } from "@/lib/setInputValue";
 
-/** 名前付き input に値をセット（非制御フォームなので直接代入）。 */
+/** 名前付き input に値をセット（非制御フォーム）。 */
 function setField(name: string, value: number) {
-  const el = document.querySelector<HTMLInputElement>(`[name="${name}"]`);
-  if (el) {
-    el.value = String(value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  }
+  setInputValueByName(name, value);
 }
 
 /** 手数料プリセット。 */
@@ -130,7 +127,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
       )}
 
       {/* --- 手数料・経費 --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">手数料・経費</legend>
 
         {/* 手数料プリセット */}
@@ -165,7 +162,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
       </fieldset>
 
       {/* --- 為替 --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">為替</legend>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FxRateInput
@@ -179,7 +176,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
       </fieldset>
 
       {/* --- 仕入れ判定 --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">仕入れ判定のしきい値</legend>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="仕入れ候補（以上）" name="thresholdBuyPct" defaultValue={defaults.thresholdBuyPct} step="0.1" suffix="%" hint="この利益率以上 → 仕入れ候補" error={e.thresholdBuyPct} />
@@ -189,7 +186,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
       </fieldset>
 
       {/* --- 通知（アラート） --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">通知（アラート）</legend>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="通知する利益率（以上）" name="notifyProfitRatePct" defaultValue={defaults.notifyProfitRatePct} step="0.1" suffix="%" hint="この利益率以上のカードをダッシュボードで通知" error={e.notifyProfitRatePct} />
@@ -198,7 +195,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
       </fieldset>
 
       {/* --- PSA鑑定コスト --- */}
-      <fieldset className="flex flex-col gap-4">
+      <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">PSA鑑定コスト</legend>
 
         {/* 料金プリセット（ワンクリック入力） */}

@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { MARKETPLACES, DEFAULT_MARKETPLACE_ID } from "@/lib/marketplaces";
+import { setInputValueByName } from "@/lib/setInputValue";
 
 const inputClass =
   "w-full rounded-md border border-black/15 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-white/20 dark:bg-black/20";
@@ -17,6 +18,7 @@ interface Summary {
   min: number;
   max: number;
   avg: number;
+  median: number;
   currency: string;
 }
 interface DisplayItem {
@@ -31,11 +33,7 @@ type Mode = "asking" | "sold";
 type Status = "idle" | "loading" | "done" | "error" | "no_credentials" | "not_approved";
 
 function setSellPrice(value: number) {
-  const el = document.querySelector<HTMLInputElement>('input[name="sellPriceUsd"]');
-  if (el) {
-    el.value = String(value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  }
+  setInputValueByName("sellPriceUsd", value);
 }
 
 export function EbayLookup({ defaultQuery = "" }: { defaultQuery?: string }) {
@@ -178,22 +176,28 @@ export function EbayLookup({ defaultQuery = "" }: { defaultQuery?: string }) {
       {/* 集計結果 */}
       {status === "done" && summary && (
         <div className="mt-3 space-y-2">
-          <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-5">
             <Stat label="件数" value={`${summary.count}`} />
             <Stat label="最安" value={`${summary.currency} ${summary.min}`} />
+            <Stat label="中央値" value={`${summary.currency} ${summary.median}`} highlight />
             <Stat label="平均" value={`${summary.currency} ${summary.avg}`} />
             <Stat label="最高" value={`${summary.currency} ${summary.max}`} />
           </div>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="text-black/50 dark:text-white/50">販売価格(USD)に反映:</span>
+            <button type="button" onClick={() => setSellPrice(summary.median)} className="rounded border border-blue-500/50 bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-300">中央値</button>
             <button type="button" onClick={() => setSellPrice(summary.min)} className="rounded border border-black/15 px-2 py-1 hover:bg-black/[0.03] dark:border-white/20">最安</button>
             <button type="button" onClick={() => setSellPrice(summary.avg)} className="rounded border border-black/15 px-2 py-1 hover:bg-black/[0.03] dark:border-white/20">平均</button>
           </div>
+          <p className="text-[11px] leading-relaxed text-black/45 dark:text-white/45">
+            ※ 検索結果には状態の悪い品・別カード・まとめ売りが混ざります。
+            最安は外れ値を拾いやすいので、目安には<b>中央値</b>が向いています。
+          </p>
           {items.length > 0 && (
             <ul className="mt-1 space-y-1 text-xs">
               {items.map((l, i) => (
                 <li key={i} className="flex items-center justify-between gap-2">
-                  <span className="truncate text-black/70 dark:text-white/70">
+                  <span className="min-w-0 truncate text-black/70 dark:text-white/70">
                     {l.title}
                     {l.sub && <span className="ml-1 text-black/40 dark:text-white/40">({l.sub})</span>}
                   </span>
@@ -238,9 +242,24 @@ function Guide({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  /** 目安として推したい値（中央値）を目立たせる。 */
+  highlight?: boolean;
+}) {
   return (
-    <div className="rounded-md bg-white p-2 dark:bg-black/20">
+    <div
+      className={`rounded-md p-2 ${
+        highlight
+          ? "bg-blue-50 ring-1 ring-blue-500/30 dark:bg-blue-950/30"
+          : "bg-white dark:bg-black/20"
+      }`}
+    >
       <div className="text-[10px] text-black/50 dark:text-white/50">{label}</div>
       <div className="text-sm font-semibold">{value}</div>
     </div>
