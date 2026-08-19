@@ -1,7 +1,12 @@
 # pokeca-profit-tool（ポケカ海外販売 利益判定ツール）
 
 日本で仕入れたポケモンカードを eBay など海外で販売した場合の**予想利益**・**利益率**を
-自動計算し、「仕入れ候補 / 検討 / 見送り」を判定するローカルツールです。
+自動計算し、「仕入れ候補 / 検討 / 見送り」を判定するツールです。
+
+**公開URL**: https://pokeca-profit-tool.vercel.app （合言葉で保護）
+
+Mac・iPhone のどちらからでも同じデータを見られます。Mac を起動しておく必要は
+ありません。
 
 > ⚠️ 価格は常に変動します。本ツールの数値は入力データと設定値に基づく **「予想」** であり、
 > 利益を保証するものではありません。
@@ -28,11 +33,20 @@
 |---|---|
 | フレームワーク | Next.js 16（App Router / Server Actions）+ TypeScript |
 | スタイル | Tailwind CSS 4 |
-| データベース | SQLite（ファイル1個）+ Prisma 7（driver adapter: better-sqlite3）|
+| データベース | PostgreSQL（Neon）+ Prisma 7（driver adapter: pg）|
+| ホスティング | Vercel（main への push で自動デプロイ・マイグレーションも自動適用）|
+| 認証 | 合言葉1つ（`APP_PASSWORD`）。src/proxy.ts で全経路を保護 |
 | 入力検証 | zod |
 | テスト | Vitest（計算・検証・CSVの単体テスト）|
 
-すべてローカルで完結し、外部サーバーは不要です。MVP は外部 API なしで動作します。
+### 認証について
+
+`APP_PASSWORD` が設定されている環境でのみ保護が有効になります。未設定なら
+素通りするため、手元での開発は今までどおり。Cookie には合言葉そのものではなく
+HMAC 署名付きトークン（有効期限つき・httpOnly）を入れています。
+
+ページは `/login` へ誘導し、API は 401 を返します。API を守らないと画面が
+隠れていても `/api/backup` から在庫が丸ごと取れてしまうためです。
 
 ---
 
