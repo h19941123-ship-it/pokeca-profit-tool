@@ -1,5 +1,5 @@
 // CSV/貼り付けテキストから複数カードをまとめて取り込むパーサ（純粋関数）。
-// 列順: カード名, 仕入価格(円), 販売価格(USD), セット, 番号, レアリティ, 仕入先, タグ
+// 列順: カード名, 仕入価格(円), 販売価格(USD), セット, 番号, レアリティ, 仕入先, タグ, 画像URL
 // タブ区切り(スプレッドシート貼り付け)またはカンマ区切りに対応。ヘッダー行は自動スキップ。
 
 export interface ImportCard {
@@ -11,6 +11,8 @@ export interface ImportCard {
   rarity: string | null;
   supplier: string | null;
   tags: string | null;
+  /** 画像URL（任意）。空なら画像なしで登録される。 */
+  imageUrl: string | null;
 }
 
 export interface ImportResult {
@@ -77,6 +79,7 @@ export function parseImportText(text: string): ImportResult {
       rarity: str(f[5]),
       supplier: str(f[6]),
       tags: str(f[7]),
+      imageUrl: str(f[8]),
     });
   }
   return { cards, total, skipped };

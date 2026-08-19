@@ -134,6 +134,7 @@ export async function importCards(
         rarity: c.rarity,
         supplier: c.supplier,
         tags: c.tags,
+        imageUrl: c.imageUrl,
         fxRate: fx,
       })),
     });

@@ -18,7 +18,7 @@ export function ImportForm() {
       <div className="rounded-md border border-black/10 bg-black/[0.02] p-3 text-sm dark:border-white/15 dark:bg-white/[0.03]">
         <p className="mb-1 font-semibold">貼り付け形式（1行1枚・カンマまたはタブ区切り）</p>
         <p className="text-black/60 dark:text-white/60">
-          列順: <code>カード名, 仕入価格(円), 販売価格(USD), セット, 番号, レアリティ, 仕入先, タグ</code>
+          列順: <code>カード名, 仕入価格(円), 販売価格(USD), セット, 番号, レアリティ, 仕入先, タグ, 画像URL</code>
         </p>
         <p className="mt-1 text-black/60 dark:text-white/60">
           カード名以外は省略可。Excel/スプレッドシートからそのままコピー＆ペーストできます。

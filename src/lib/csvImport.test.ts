@@ -45,3 +45,30 @@ describe("parseImportText", () => {
     expect(parseImportText("   ").cards).toHaveLength(0);
   });
 });
+
+describe("画像URL列（9列目）", () => {
+  it("画像URLを読み取る", () => {
+    const r = parseImportText(
+      "リザードンex,5000,120,151,201/165,SAR,駿河屋,高額,https://example.com/a.webp",
+    );
+    expect(r.cards[0].imageUrl).toBe("https://example.com/a.webp");
+  });
+
+  it("省略しても落ちない（従来の8列のまま使える）", () => {
+    const r = parseImportText("リザードンex,5000,120,151,201/165,SAR,駿河屋,高額");
+    expect(r.cards[0].imageUrl).toBeNull();
+    expect(r.cards[0].tags).toBe("高額");
+  });
+
+  it("空欄なら null", () => {
+    const r = parseImportText("リザードンex,5000,120,,,,,,");
+    expect(r.cards[0].imageUrl).toBeNull();
+  });
+
+  it("タブ区切りでも読める", () => {
+    const r = parseImportText(
+      "リザードンex\t5000\t120\t151\t201/165\tSAR\t駿河屋\t高額\thttps://example.com/b.webp",
+    );
+    expect(r.cards[0].imageUrl).toBe("https://example.com/b.webp");
+  });
+});
