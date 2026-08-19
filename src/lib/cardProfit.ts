@@ -4,6 +4,7 @@
 import type { Card, Settings } from "@/generated/prisma/client";
 import { calcProfit, type ProfitInputs, type ProfitResult } from "@/lib/profit";
 import { maxPurchaseForRate, breakEvenSellUsd } from "@/lib/advice";
+import { compareChannels, type ChannelComparison } from "@/lib/channel";
 
 /** カードと設定から利益計算の入力を作る（為替はカード優先、無ければ設定の既定値）。 */
 export function buildProfitInputs(card: Card, settings: Settings): ProfitInputs {
@@ -56,4 +57,16 @@ export function computeCardAdvice(card: Card, settings: Settings): CardAdvice {
 export function computeRealizedProfit(card: Card, settings: Settings): ProfitResult {
   const inputs = buildProfitInputs(card, settings);
   return calcProfit({ ...inputs, sellPriceUsd: card.soldPriceUsd });
+}
+
+/** カード＋設定から「国内で売るか／海外に出すか」を比較する。 */
+export function computeCardChannel(
+  card: Card,
+  settings: Settings,
+): ChannelComparison {
+  return compareChannels(
+    buildProfitInputs(card, settings),
+    card.domesticBuybackJpy,
+    settings.minExportGainJpy,
+  );
 }

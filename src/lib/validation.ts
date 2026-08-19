@@ -43,6 +43,13 @@ export const cardFormSchema = z.object({
       .min(0, "仕入れ価格は0以上で入力してください"),
   ),
   supplier: optionalString,
+  domesticBuybackJpy: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? 0 : v),
+    z.coerce
+      .number({ error: "国内買取額を数値で入力してください" })
+      .int("国内買取額は整数（円）で入力してください")
+      .min(0, "国内買取額は0以上で入力してください"),
+  ),
   purchasedAt: z.preprocess(
     emptyToUndef,
     z.coerce.date({ error: "購入日の形式が正しくありません" }).optional(),
@@ -158,6 +165,7 @@ export function parseCardForm(formData: FormData): ParseResult {
     imageUrl: formData.get("imageUrl"),
     purchasePriceJpy: formData.get("purchasePriceJpy"),
     supplier: formData.get("supplier"),
+    domesticBuybackJpy: formData.get("domesticBuybackJpy"),
     purchasedAt: formData.get("purchasedAt"),
     stock: formData.get("stock"),
     sellPriceUsd: formData.get("sellPriceUsd"),

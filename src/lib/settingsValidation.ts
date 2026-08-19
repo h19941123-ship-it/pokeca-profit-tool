@@ -40,6 +40,7 @@ export const settingsFormSchema = z.object({
     .number({ error: "検討しきい値を数値で入力してください" })
     .min(0, "検討しきい値は0以上で入力してください"),
   minProfitJpy: yenInt("最低利益額"),
+  minExportGainJpy: yenInt("海外に出す最低差額"),
   notifyProfitRatePct: percent("通知する利益率"),
   notifyPriceChangePct: percent("通知する価格変動率"),
   gradingFeeRegularUsd: z.coerce
@@ -65,6 +66,7 @@ export interface SettingsUpdate {
   thresholdBuyPct: number;
   thresholdConsiderPct: number;
   minProfitJpy: number;
+  minExportGainJpy: number;
   notifyProfitRatePct: number;
   notifyPriceChangePct: number;
   gradingFeeRegularUsd: number;
@@ -91,6 +93,7 @@ export function parseSettingsForm(formData: FormData): SettingsParseResult {
     thresholdBuyPct: formData.get("thresholdBuyPct"),
     thresholdConsiderPct: formData.get("thresholdConsiderPct"),
     minProfitJpy: formData.get("minProfitJpy"),
+    minExportGainJpy: formData.get("minExportGainJpy"),
     notifyProfitRatePct: formData.get("notifyProfitRatePct"),
     notifyPriceChangePct: formData.get("notifyPriceChangePct"),
     gradingFeeRegularUsd: formData.get("gradingFeeRegularUsd"),
@@ -125,6 +128,7 @@ export function parseSettingsForm(formData: FormData): SettingsParseResult {
       thresholdBuyPct: v.thresholdBuyPct,
       thresholdConsiderPct: v.thresholdConsiderPct,
       minProfitJpy: v.minProfitJpy,
+      minExportGainJpy: v.minExportGainJpy,
       notifyProfitRatePct: v.notifyProfitRatePct,
       notifyPriceChangePct: v.notifyPriceChangePct,
       gradingFeeRegularUsd: v.gradingFeeRegularUsd,

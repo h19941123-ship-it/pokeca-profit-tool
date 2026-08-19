@@ -41,6 +41,7 @@ export interface CardFieldDefaults {
   condition?: string;
   imageUrl?: string;
   purchasePriceJpy?: string;
+  domesticBuybackJpy?: string;
   supplier?: string;
   purchasedAt?: string;
   stock?: string;
@@ -234,6 +235,34 @@ export function CardForm({
           </Field>
           <Field label="仕入れ先" error={errors.supplier}>
             <input name="supplier" className={inputClass} placeholder="カードラッシュ" defaultValue={d.supplier ?? ""} />
+          </Field>
+          <Field
+            label="国内買取額（円）"
+            error={errors.domesticBuybackJpy}
+            hint="買取チェッカー等で調べた「店が買い取る値段」"
+          >
+            <div className="flex items-center gap-2">
+              <input
+                name="domesticBuybackJpy"
+                type="number"
+                min="0"
+                step="1"
+                className={inputClass}
+                placeholder="18000"
+                defaultValue={d.domesticBuybackJpy ?? ""}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const v = document.querySelector<HTMLInputElement>('[name="domesticBuybackJpy"]')?.value;
+                  if (v) setInputValueByName("purchasePriceJpy", v);
+                }}
+                className="whitespace-nowrap rounded-md border border-black/15 px-2 py-2 text-xs hover:bg-black/[0.03] dark:border-white/20 dark:hover:bg-white/[0.05]"
+                title="買取額を仕入れ値の目安として入れる（実際の仕入れ値はこれより高くなるのが普通です）"
+              >
+                仕入れ値に
+              </button>
+            </div>
           </Field>
           <Field label="購入日" error={errors.purchasedAt}>
             <input name="purchasedAt" type="date" className={inputClass} defaultValue={d.purchasedAt ?? ""} />

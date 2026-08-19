@@ -26,6 +26,7 @@ export default async function SettingsPage() {
     thresholdBuyPct: s.thresholdBuyPct,
     thresholdConsiderPct: s.thresholdConsiderPct,
     minProfitJpy: s.minProfitJpy,
+    minExportGainJpy: s.minExportGainJpy,
     notifyProfitRatePct: s.notifyProfitRatePct,
     notifyPriceChangePct: s.notifyPriceChangePct,
     gradingFeeRegularUsd: s.gradingFeeRegularUsd,

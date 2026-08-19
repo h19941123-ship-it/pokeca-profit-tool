@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
-import { computeCardProfit, resolveFxRate, computeCardAdvice } from "@/lib/cardProfit";
+import { computeCardProfit, resolveFxRate, computeCardAdvice, computeCardChannel } from "@/lib/cardProfit";
 import { computeCardGradingBoth, PLAN_LABELS, type GradingPlan } from "@/lib/cardGrading";
 import type { GradingResult } from "@/lib/grading";
 import { PriceHistoryChart, type HistoryDatum } from "@/components/PriceHistoryChart";
@@ -47,6 +47,7 @@ export default async function CardDetailPage(props: PageProps<"/cards/[id]">) {
   const grading = gradingBoth.selected === "EXPRESS" ? gradingBoth.express : gradingBoth.regular;
   const advice = computeCardAdvice(card, settings);
   const tags = splitTags(card.tags);
+  const channel = computeCardChannel(card, settings);
 
   const chartData: HistoryDatum[] = history.map((h) => ({
     label: md(h.recordedAt),
@@ -102,6 +103,7 @@ export default async function CardDetailPage(props: PageProps<"/cards/[id]">) {
             <Meta label="仕入れ先" value={card.supplier} />
             <Meta label="購入日" value={ymd(card.purchasedAt)} />
             <Meta label="コンディション" value={card.condition} />
+            <Meta label="国内買取額" value={card.domesticBuybackJpy > 0 ? yen(card.domesticBuybackJpy) : null} />
             {card.status === "SOLD" && (
               <>
                 <Meta label="実売却額" value={card.soldPriceUsd ? usd(card.soldPriceUsd) : null} />
@@ -158,6 +160,54 @@ export default async function CardDetailPage(props: PageProps<"/cards/[id]">) {
           現在の販売価格・手数料・送料・関税の設定に基づく試算です。
         </p>
       </div>
+
+      {/* 国内買取との比較 */}
+      <section className="mb-8">
+        <h2 className="mb-2 text-base font-semibold">国内で売る / 海外に出す</h2>
+        {!channel.configured ? (
+          <p className="rounded-md border border-black/10 p-4 text-sm text-black/50 dark:border-white/15 dark:text-white/50">
+            国内買取額が未入力です。「編集」で買取チェッカー等で調べた金額を入れると、
+            国内の店に売った場合と海外に出した場合のどちらが得か比較できます。
+          </p>
+        ) : (
+          <div className="rounded-md border border-black/10 p-4 dark:border-white/15">
+            <div
+              className={`mb-3 rounded-md p-3 text-sm ${
+                channel.channel === "EXPORT"
+                  ? "bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300"
+                  : channel.channel === "DOMESTIC"
+                    ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                    : "bg-black/[0.03] text-black/70 dark:bg-white/[0.05] dark:text-white/70"
+              }`}
+            >
+              <b>{channel.channelLabel}</b>
+              {channel.channel === "EXPORT" && (
+                <>：海外の方が {yen(channel.gainJpy)} 多く手元に残ります</>
+              )}
+              {channel.channel === "DOMESTIC" && (
+                <>：国内買取の方が {yen(-channel.gainJpy)} 多く、手間もかかりません</>
+              )}
+              {channel.channel === "EITHER" && (
+                <>：差は {yen(channel.gainJpy)} だけ。発送の手間を考えると国内でも十分です</>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Stat label="国内買取（手取り）" value={yen(channel.domesticNetJpy)} />
+              <Stat label="海外販売（手取り）" value={yen(channel.exportNetJpy)} />
+              <Stat
+                label="差額（海外 − 国内）"
+                value={`${channel.gainJpy >= 0 ? "+" : ""}${yen(channel.gainJpy)}`}
+                accent={channel.gainJpy >= 0}
+              />
+            </div>
+            <p className="mt-3 text-xs text-black/40 dark:text-white/40">
+              ※ 手取りは仕入れ値を引く前の金額です。すでに持っているカードなら仕入れ値は
+              どちらにも共通なので、この比較には影響しません。海外側は手数料・送料・梱包・関税を
+              差し引いています。
+            </p>
+          </div>
+        )}
+      </section>
 
       {/* PSA鑑定シミュレーション */}
       <section className="mb-8">

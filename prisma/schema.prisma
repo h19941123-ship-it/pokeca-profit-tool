@@ -49,6 +49,11 @@ model Card {
   gradedShippingJpy  Int    @default(0) // 鑑定スラブの国際送料（円）。0=素体送料を流用
   weightGrams        Int? // 梱包後重量（g）。送料自動計算に使用
 
+  // --- 国内買取（海外に出すか、国内の店に売るかの比較用）---
+  //   買取チェッカー等で調べた「店が買い取る値段」を入れる。
+  //   仕入れ値と違い手数料が引かれないので、そのまま手取りとして比較できる。
+  domesticBuybackJpy Int @default(0) // 国内買取額（円）。0=未調査
+
   // --- PSA鑑定シナリオ（生カードを鑑定して売る想定）---
   psa10SellUsd Float  @default(0) // PSA10 時の販売価格（USD）
   psa9SellUsd  Float  @default(0) // PSA9以下 時の販売価格（USD）
@@ -99,6 +104,11 @@ model Settings {
   thresholdBuyPct      Float @default(30) // これ以上 → 仕入れ候補
   thresholdConsiderPct Float @default(20) // これ以上 → 検討（未満 → 見送り）
   minProfitJpy         Int   @default(0) // 最低利益額（円）。下回れば判定を下げる
+
+  // --- 国内買取との比較 ---
+  //   海外は梱包・発送・追跡・トラブル対応の手間がかかる。差額がこれ未満なら
+  //   「国内で売っても大差ない」と判定して手間を避けられるようにする。
+  minExportGainJpy Int @default(1000) // 海外に出す価値があると見なす最低差額（円）
 
   // --- 通知（アラート）のしきい値 ---
   notifyProfitRatePct  Float @default(30) // この利益率以上でアラート

@@ -62,6 +62,7 @@ export interface SettingsDefaults {
   thresholdBuyPct: number;
   thresholdConsiderPct: number;
   minProfitJpy: number;
+  minExportGainJpy: number;
   notifyProfitRatePct: number;
   notifyPriceChangePct: number;
   gradingFeeRegularUsd: number;
@@ -182,6 +183,7 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
           <Field label="仕入れ候補（以上）" name="thresholdBuyPct" defaultValue={defaults.thresholdBuyPct} step="0.1" suffix="%" hint="この利益率以上 → 仕入れ候補" error={e.thresholdBuyPct} />
           <Field label="検討（以上）" name="thresholdConsiderPct" defaultValue={defaults.thresholdConsiderPct} step="0.1" suffix="%" hint="この利益率以上 → 検討（未満は見送り）" error={e.thresholdConsiderPct} />
           <Field label="最低利益額" name="minProfitJpy" defaultValue={defaults.minProfitJpy} suffix="円" hint="これを下回ると見送りに下げる" error={e.minProfitJpy} />
+          <Field label="海外に出す最低差額" name="minExportGainJpy" defaultValue={defaults.minExportGainJpy} suffix="円" hint="国内買取よりこの額以上多く残るなら海外へ。発送の手間の値段" error={e.minExportGainJpy} />
         </div>
       </fieldset>
 

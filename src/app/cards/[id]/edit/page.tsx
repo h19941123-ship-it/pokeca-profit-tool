@@ -41,6 +41,7 @@ export default async function EditCardPage(props: PageProps<"/cards/[id]/edit">)
     imageUrl: s(card.imageUrl),
     purchasePriceJpy: s(card.purchasePriceJpy),
     supplier: s(card.supplier),
+    domesticBuybackJpy: s(card.domesticBuybackJpy),
     purchasedAt: ymd(card.purchasedAt),
     stock: s(card.stock),
     sellPriceUsd: s(card.sellPriceUsd),
