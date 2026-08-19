@@ -11,6 +11,7 @@ import { getSettings } from "@/lib/settings";
 import { computeCardProfit } from "@/lib/cardProfit";
 import { recordPriceHistory } from "@/lib/priceHistory";
 import { parseImportText } from "@/lib/csvImport";
+import type { BuybackFormState } from "@/app/cards/buyback/buybackState";
 import { logger } from "@/lib/logger";
 import type { CardFormState } from "@/app/cards/formState";
 import type { ImportFormState } from "@/app/cards/import/importState";
@@ -265,5 +266,69 @@ export async function deleteCard(formData: FormData): Promise<void> {
   } catch (err) {
     logger.error("カード削除に失敗", err);
     // 画面は一覧が再検証されるだけ。存在しないid等でもクラッシュさせない。
+  }
+}
+
+/**
+ * 買取額をまとめて更新する。
+ *
+ * 入力は `buyback_<カードID>` という名前のフィールド群。カード名で突き合わせると
+ * 同名カード（番号違いのリザードンex SAR など）を取り違えるため、IDで確実に指定する。
+ * 値が変わっていない行は更新しない（無駄な書き込みと updatedAt の更新を避ける）。
+ */
+export async function updateBuybackPrices(
+  _prev: BuybackFormState,
+  formData: FormData,
+): Promise<BuybackFormState> {
+  const entries: { id: number; value: number }[] = [];
+  for (const [key, raw] of formData.entries()) {
+    const m = key.match(/^buyback_(\d+)$/);
+    if (!m) continue;
+    const id = Number(m[1]);
+    const text = String(raw).trim();
+    const value = text === "" ? 0 : Number(text);
+    if (!Number.isInteger(id) || id <= 0) continue;
+    if (!Number.isFinite(value) || value < 0) {
+      return { status: "error", message: "買取額は0以上の数値で入力してください。" };
+    }
+    entries.push({ id, value: Math.round(value) });
+  }
+
+  if (entries.length === 0) {
+    return { status: "error", message: "更新する対象がありませんでした。" };
+  }
+
+  try {
+    // 変化があった行だけ更新する
+    const current = await prisma.card.findMany({
+      where: { id: { in: entries.map((e) => e.id) } },
+      select: { id: true, domesticBuybackJpy: true },
+    });
+    const now = new Map(current.map((c) => [c.id, c.domesticBuybackJpy]));
+    const changed = entries.filter((e) => now.get(e.id) !== e.value);
+
+    if (changed.length === 0) {
+      return { status: "success", message: "変更はありませんでした。", updatedCount: 0 };
+    }
+
+    await prisma.$transaction(
+      changed.map((e) =>
+        prisma.card.update({
+          where: { id: e.id },
+          data: { domesticBuybackJpy: e.value },
+        }),
+      ),
+    );
+
+    revalidatePath("/");
+    revalidatePath("/cards/buyback");
+    return {
+      status: "success",
+      message: `${changed.length} 件の買取額を更新しました。`,
+      updatedCount: changed.length,
+    };
+  } catch (err) {
+    logger.error("買取額の一括更新に失敗", err);
+    return { status: "error", message: "更新に失敗しました。時間をおいて再度お試しください。" };
   }
 }

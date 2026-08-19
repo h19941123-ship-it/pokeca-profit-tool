@@ -263,6 +263,9 @@ function Shell({
           <Link href="/cards/import" className="whitespace-nowrap text-sm text-blue-600 hover:underline">
             一括登録
           </Link>
+          <Link href="/cards/buyback" className="whitespace-nowrap text-sm text-blue-600 hover:underline">
+            買取額
+          </Link>
           <Link href="/settings" className="whitespace-nowrap text-sm text-blue-600 hover:underline">
             設定
           </Link>
