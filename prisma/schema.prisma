@@ -1,8 +1,12 @@
 // Prisma スキーマ
 // 参考: https://pris.ly/d/prisma-schema
 //
-// DB は SQLite（ローカルファイル1個）。接続先は prisma.config.ts が
-// 環境変数 DATABASE_URL（.env）から読み込む。
+// DB は PostgreSQL（Neon）。接続先は prisma.config.ts が
+// 環境変数 DATABASE_URL から読み込む。
+//
+// 2026-08 に SQLite から移行した。理由は「Macを起動していなくても
+// iPhoneから実データを見たい」。SQLite はファイル1個で完結する代わりに
+// 置き場所がその端末に縛られるため、常時アクセスには向かない。
 
 generator client {
   provider = "prisma-client"
@@ -10,7 +14,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // -----------------------------------------------------------------------------

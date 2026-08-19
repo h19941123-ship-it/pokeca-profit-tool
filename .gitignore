@@ -39,9 +39,6 @@ yarn-error.log*
 *.db-journal
 *.sqlite
 
-# ただし公開デモ用のシードDBは配布物に含める。
-# これが除外されると、公開先で「デモのデータが無い」状態になる。
-!prisma/demo.db
 
 # application logs
 /logs

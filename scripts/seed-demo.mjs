@@ -11,14 +11,7 @@
 //   - 売却済のカードがあり、レポートの実現損益が0件にならない
 //   - 価格履歴があり、詳細ページの推移グラフが描ける
 
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
-
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dbPath = path.join(projectRoot, "prisma", "demo.db");
+import pg from "pg";
 
 // 画像URLは TCGdex の公開CDN。読み込みに失敗しても CardThumb が
 // プレースホルダに切り替わるので、デモが壊れて見えることはない。
@@ -225,20 +218,6 @@ const CARDS = [
 
 // --- ここから下は組み立て処理 -------------------------------------------------
 
-const iso = (d) => (d instanceof Date ? d.toISOString() : d);
-
-function rebuildSchema() {
-  rmSync(dbPath, { force: true });
-  rmSync(`${dbPath}-journal`, { force: true });
-  mkdirSync(path.dirname(dbPath), { recursive: true });
-  // 既存のマイグレーションをそのまま適用する（スキーマを二重管理しない）
-  execFileSync("npx", ["--yes", "prisma", "migrate", "deploy"], {
-    cwd: projectRoot,
-    env: { ...process.env, DATABASE_URL: `file:${dbPath}` },
-    stdio: "inherit",
-  });
-}
-
 /** 利益・利益率（履歴行に入れる値）。src/lib/profit.ts と同じ式。 */
 function calcProfit({ purchasePriceJpy, sellPriceUsd, fxRate, shippingJpy }) {
   const revenue = Math.round(sellPriceUsd * fxRate);
@@ -252,40 +231,29 @@ function calcProfit({ purchasePriceJpy, sellPriceUsd, fxRate, shippingJpy }) {
   };
 }
 
-function seed() {
-  const db = new Database(dbPath);
-  db.pragma("foreign_keys = ON");
+async function seed() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    console.error("DATABASE_URL を指定してください。");
+    console.error('  例: DATABASE_URL="postgresql://..." node scripts/seed-demo.mjs');
+    process.exit(1);
+  }
+  if (!/^postgres/.test(connectionString)) {
+    console.error("PostgreSQL の接続文字列を指定してください。");
+    process.exit(1);
+  }
 
-  const insertCard = db.prepare(`
-    INSERT INTO Card (
-      name, cardNumber, setName, rarity, language, condition, imageUrl,
-      purchasePriceJpy, supplier, purchasedAt, stock,
-      sellPriceUsd, shippingChargedUsd, fxRate, shippingJpy, gradedShippingJpy, weightGrams,
-      psa10SellUsd, psa9SellUsd, psa10Prob, gradingPlan,
-      status, soldPriceUsd, soldAt, notes, tags,
-      createdAt, updatedAt
-    ) VALUES (
-      @name, @cardNumber, @setName, @rarity, 'JP', @condition, @imageUrl,
-      @purchasePriceJpy, @supplier, @purchasedAt, @stock,
-      @sellPriceUsd, 0, NULL, @shippingJpy, @gradedShippingJpy, @weightGrams,
-      @psa10SellUsd, @psa9SellUsd, @psa10Prob, 'REGULAR',
-      @status, @soldPriceUsd, @soldAt, @notes, @tags,
-      @createdAt, @createdAt
-    )
-  `);
+  const client = new pg.Client({ connectionString });
+  await client.connect();
 
-  const insertHistory = db.prepare(`
-    INSERT INTO PriceHistory (cardId, recordedAt, purchasePriceJpy, sellPriceUsd, fxRate, profitJpy, profitRate)
-    VALUES (@cardId, @recordedAt, @purchasePriceJpy, @sellPriceUsd, @fxRate, @profitJpy, @profitRate)
-  `);
-
-  db.transaction(() => {
-    db.prepare("DELETE FROM PriceHistory").run();
-    db.prepare("DELETE FROM Card").run();
-    db.prepare("DELETE FROM Settings").run();
+  try {
+    await client.query("BEGIN");
+    await client.query('DELETE FROM "PriceHistory"');
+    await client.query('DELETE FROM "Card"');
+    await client.query('DELETE FROM "Settings"');
 
     // 設定は既定値のまま（スキーマの @default が入る）
-    db.prepare("INSERT INTO Settings (id, updatedAt) VALUES (1, ?)").run(iso(new Date()));
+    await client.query('INSERT INTO "Settings" (id, "updatedAt") VALUES (1, NOW())');
 
     for (const card of CARDS) {
       const row = {
@@ -303,12 +271,38 @@ function seed() {
         notes: null,
         tags: null,
         ...card,
-        purchasedAt: iso(card.purchasedAt) ?? null,
-        soldAt: iso(card.soldAt) ?? null,
-        createdAt: iso(card.purchasedAt ?? new Date()),
       };
-      delete row.history;
-      const { lastInsertRowid: cardId } = insertCard.run(row);
+      const createdAt = row.purchasedAt ?? new Date();
+
+      const { rows } = await client.query(
+        `INSERT INTO "Card" (
+           name, "cardNumber", "setName", rarity, language, condition, "imageUrl",
+           "purchasePriceJpy", supplier, "purchasedAt", stock,
+           "sellPriceUsd", "shippingChargedUsd", "fxRate", "shippingJpy",
+           "gradedShippingJpy", "weightGrams",
+           "psa10SellUsd", "psa9SellUsd", "psa10Prob", "gradingPlan",
+           status, "soldPriceUsd", "soldAt", notes, tags,
+           "createdAt", "updatedAt"
+         ) VALUES (
+           $1,$2,$3,$4,'JP',$5,$6,
+           $7,$8,$9,$10,
+           $11,0,NULL,$12,
+           $13,$14,
+           $15,$16,$17,'REGULAR',
+           $18,$19,$20,$21,$22,
+           $23,$23
+         ) RETURNING id`,
+        [
+          row.name, row.cardNumber, row.setName, row.rarity, row.condition, row.imageUrl,
+          row.purchasePriceJpy, row.supplier, row.purchasedAt, row.stock,
+          row.sellPriceUsd, row.shippingJpy,
+          row.gradedShippingJpy, row.weightGrams,
+          row.psa10SellUsd, row.psa9SellUsd, row.psa10Prob,
+          row.status, row.soldPriceUsd, row.soldAt, row.notes, row.tags,
+          createdAt,
+        ],
+      );
+      const cardId = rows[0].id;
 
       for (const point of card.history ?? []) {
         const { profitJpy, profitRate } = calcProfit({
@@ -317,30 +311,29 @@ function seed() {
           fxRate: point.fxRate,
           shippingJpy: card.shippingJpy,
         });
-        insertHistory.run({
-          cardId,
-          recordedAt: iso(point.at),
-          purchasePriceJpy: card.purchasePriceJpy,
-          sellPriceUsd: point.sellPriceUsd,
-          fxRate: point.fxRate,
-          profitJpy,
-          profitRate,
-        });
+        await client.query(
+          `INSERT INTO "PriceHistory"
+             ("cardId", "recordedAt", "purchasePriceJpy", "sellPriceUsd", "fxRate", "profitJpy", "profitRate")
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [cardId, point.at, card.purchasePriceJpy, point.sellPriceUsd, point.fxRate, profitJpy, profitRate],
+        );
       }
     }
-  })();
 
-  const cards = db.prepare("SELECT COUNT(*) n FROM Card").get().n;
-  const history = db.prepare("SELECT COUNT(*) n FROM PriceHistory").get().n;
-  db.close();
-  console.log(`\nデモDBを作成しました: ${path.relative(projectRoot, dbPath)}`);
-  console.log(`  カード ${cards} 件 / 価格履歴 ${history} 件`);
+    await client.query("COMMIT");
+
+    const cards = (await client.query('SELECT COUNT(*)::int n FROM "Card"')).rows[0].n;
+    const history = (await client.query('SELECT COUNT(*)::int n FROM "PriceHistory"')).rows[0].n;
+    console.log(`\nデモデータを投入しました（カード ${cards} 件 / 価格履歴 ${history} 件）`);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    await client.end();
+  }
 }
 
-if (!existsSync(path.join(projectRoot, "prisma", "migrations"))) {
-  console.error("prisma/migrations が見つかりません。プロジェクトルートから実行してください。");
+seed().catch((err) => {
+  console.error(err);
   process.exit(1);
-}
-
-rebuildSchema();
-seed();
+});
