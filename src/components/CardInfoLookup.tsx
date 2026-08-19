@@ -49,6 +49,10 @@ export function CardInfoLookup({ defaultQuery = "" }: { defaultQuery?: string })
     }
     setStatus("loading");
     setMessage("");
+    // 前回の結果を消してから引く。消さないと、失敗したときに古い候補が
+    // 残ったままエラーだけ出て、別のカードの結果を見せてしまう。
+    setCards([]);
+    setAppliedId(null);
     try {
       const res = await fetch(`/api/pokemontcg?q=${encodeURIComponent(q)}&lang=${lang}`, { cache: "no-store" });
       const data = await res.json();
