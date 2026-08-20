@@ -42,6 +42,10 @@ export function buildAlerts(inputs: AlertInput[], settings: Settings): AlertItem
   const changeThreshold = settings.notifyPriceChangePct;
 
   for (const { card, profit, history } of inputs) {
+    // 売却済は手元に無い。「利益率が高い」「値上がりした」と言われても
+    // もう打つ手が無いので通知しない。
+    if (card.status === "SOLD") continue;
+
     // 高利益率
     if (profit.profitRate !== null && profit.profitRate >= rateThreshold) {
       alerts.push({

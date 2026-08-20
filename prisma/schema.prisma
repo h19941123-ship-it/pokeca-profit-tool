@@ -96,7 +96,7 @@ model Settings {
   // --- 手数料・経費（利益計算で使用）---
   ebayFeePct     Float @default(0.13) // eBay 販売手数料率（0.13 = 13%）
   ebayFixedFeeUsd Float @default(0.4) // eBay 1注文あたり定額手数料（USD）
-  paymentFeePct  Float @default(0.03) // 決済手数料率（マネージドペイメントでは0推奨）
+  paymentFeePct  Float @default(0) // 決済手数料率。eBayマネージドペイメントは販売手数料に内包されるため0
   fxFeePct       Float @default(0.02) // 為替/国際手数料率
   tariffRatePct  Float @default(0) // 関税率(%)。米国DDP等。0=なし（例: 日本原産12.5）
   packingJpy     Int   @default(200) // 梱包費（円）

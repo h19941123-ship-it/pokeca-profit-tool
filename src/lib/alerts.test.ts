@@ -63,3 +63,20 @@ describe("buildAlerts", () => {
     expect(buildAlerts(inputs, settings)).toHaveLength(0);
   });
 });
+
+describe("売却済カードは通知しない", () => {
+  const row = (status: string): AlertInput => ({
+    card: { ...card(1, "リザードンex SAR"), status } as Card,
+    profit: profit(50),
+    history: [],
+  });
+
+  it("手元に無いカードは高利益率でも通知に出さない", () => {
+    expect(buildAlerts([row("STOCK")], settings).length).toBeGreaterThan(0);
+    expect(buildAlerts([row("SOLD")], settings)).toEqual([]);
+  });
+
+  it("出品中はまだ値下げなどの手を打てるので通知する", () => {
+    expect(buildAlerts([row("LISTED")], settings).length).toBeGreaterThan(0);
+  });
+});

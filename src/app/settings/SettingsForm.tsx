@@ -148,8 +148,16 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="eBay手数料率" name="ebayFeePctInput" defaultValue={defaults.ebayFeePctInput} step="0.01" suffix="%" hint="トレカは約13.25%" error={e.ebayFeePctInput} />
           <Field label="eBay定額手数料" name="ebayFixedFeeUsd" defaultValue={defaults.ebayFixedFeeUsd} step="0.01" suffix="USD" hint="1注文あたり（約$0.40）" error={e.ebayFixedFeeUsd} />
-          <Field label="決済手数料率" name="paymentFeePctInput" defaultValue={defaults.paymentFeePctInput} step="0.1" suffix="%" hint="マネージドペイメントは0推奨（eBay手数料に内包）" error={e.paymentFeePctInput} />
+          <Field label="決済手数料率" name="paymentFeePctInput" defaultValue={defaults.paymentFeePctInput} step="0.1" suffix="%" hint="マネージドペイメントは0（eBay手数料に内包）" error={e.paymentFeePctInput} />
         </div>
+        {defaults.paymentFeePctInput > 0 && (
+          <div className="rounded-md border border-amber-300/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
+            <b>決済手数料が {defaults.paymentFeePctInput}% になっています。</b>
+            eBay のマネージドペイメントでは決済手数料は販売手数料に含まれるため、
+            通常は <b>0</b> です。二重に引いていると利益が実際より少なく表示され、
+            買えるカードを見送る方向に外れます。上のプリセットを押すと 0 になります。
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field label="為替/国際手数料率" name="fxFeePctInput" defaultValue={defaults.fxFeePctInput} step="0.1" suffix="%" hint="国際手数料の目安 約1.35%" error={e.fxFeePctInput} />
           <Field label="関税率（DDP）" name="tariffRatePctInput" defaultValue={defaults.tariffRatePctInput} step="0.1" suffix="%" hint="米国向け立替。日本原産は12.5。不要なら0" error={e.tariffRatePctInput} />
