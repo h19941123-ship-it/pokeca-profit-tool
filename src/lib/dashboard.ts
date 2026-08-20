@@ -54,6 +54,7 @@ export interface DashboardSummary {
   buy: number; // 判定別 件数
   consider: number;
   skip: number;
+  unset: number; // 仕入れ価格が未入力で判定できない件数
 }
 
 /** 全行からサマリーを計算する。 */
@@ -66,6 +67,7 @@ export function summarizeRows(rows: CardRow[]): DashboardSummary {
   let buy = 0;
   let consider = 0;
   let skip = 0;
+  let unset = 0;
 
   for (const { card, profit } of rows) {
     const qty = Math.max(card.stock, 0);
@@ -78,6 +80,7 @@ export function summarizeRows(rows: CardRow[]): DashboardSummary {
     }
     if (profit.decision === "BUY") buy += 1;
     else if (profit.decision === "CONSIDER") consider += 1;
+    else if (profit.decision === "UNSET") unset += 1;
     else skip += 1;
   }
 
@@ -89,6 +92,7 @@ export function summarizeRows(rows: CardRow[]): DashboardSummary {
     buy,
     consider,
     skip,
+    unset,
   };
 }
 

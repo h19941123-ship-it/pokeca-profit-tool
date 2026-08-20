@@ -12,6 +12,7 @@ const DECISION_STYLES: Record<Decision, string> = {
   BUY: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
   CONSIDER: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
   SKIP: "bg-gray-200 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300",
+  UNSET: "bg-slate-100 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400",
 };
 
 export function LiveProfitPreview({ preview }: { preview: PreviewResult }) {

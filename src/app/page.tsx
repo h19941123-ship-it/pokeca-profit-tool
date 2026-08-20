@@ -425,6 +425,7 @@ function DecisionBadge({ decision, label }: { decision: Decision; label: string 
     BUY: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
     CONSIDER: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
     SKIP: "bg-gray-200 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300",
+    UNSET: "bg-slate-100 text-slate-500 dark:bg-slate-800/60 dark:text-slate-400",
   };
   return (
     <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[decision]}`}>
@@ -460,7 +461,11 @@ function SummaryPanel({ s }: { s: DashboardSummary }) {
       <SummaryTile label="平均利益率" value={pct(s.avgProfitRate)} />
       <SummaryTile
         label="判定"
-        value={`候補${s.buy} / 検討${s.consider} / 見送り${s.skip}`}
+        value={
+          s.unset > 0
+            ? `候補${s.buy} / 検討${s.consider} / 見送り${s.skip} / 未設定${s.unset}`
+            : `候補${s.buy} / 検討${s.consider} / 見送り${s.skip}`
+        }
       />
     </section>
   );

@@ -39,6 +39,7 @@ export function SearchBar({
             <option value="BUY">仕入れ候補</option>
             <option value="CONSIDER">検討</option>
             <option value="SKIP">見送り</option>
+            <option value="UNSET">未設定</option>
           </select>
         </label>
 

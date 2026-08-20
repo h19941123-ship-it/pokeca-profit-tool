@@ -36,7 +36,7 @@ function num(v: string | string[] | undefined): number | undefined {
 /** 判定文字列を安全に変換。 */
 function toDecision(v: string | string[] | undefined): Decision | undefined {
   const s = first(v);
-  return s === "BUY" || s === "CONSIDER" || s === "SKIP" ? s : undefined;
+  return s === "BUY" || s === "CONSIDER" || s === "SKIP" || s === "UNSET" ? s : undefined;
 }
 
 /** searchParams を検索条件に変換する。 */

@@ -124,14 +124,26 @@ describe("calcProfit", () => {
     expect(r.score).toBeLessThanOrEqual(39);
   });
 
-  it("仕入れ0円で利益プラス: 利益率は null、判定 BUY", () => {
+  it("仕入れ価格が未入力(0円): 判定は UNSET・スコア0", () => {
+    // 以前は「タダで手に入る＝ROI無限大」として BUY にしていたが、
+    // 実際の使い方では0円は「まだ価格を調べていない」を意味する。
+    // 候補リストを一括登録すると全部が「仕入れ候補」に見えてしまい、
+    // 判定として機能しなかったため UNSET を返す。
     const r = calcProfit(
       baseInputs({ purchasePriceJpy: 0, sellPriceUsd: 10, fxRate: 150 }),
     );
-    expect(r.profitJpy).toBe(1500);
-    expect(r.profitRate).toBeNull();
-    expect(r.decision).toBe("BUY");
-    expect(r.score).toBe(80);
+    expect(r.profitJpy).toBe(1500); // 利益額そのものは計算できる
+    expect(r.profitRate).toBeNull(); // 利益率は割り算できない
+    expect(r.decision).toBe("UNSET");
+    expect(r.decisionLabel).toBe("未設定");
+    expect(r.score).toBe(0);
+  });
+
+  it("仕入れ価格を入れた瞬間から判定が働く", () => {
+    const unset = calcProfit(baseInputs({ purchasePriceJpy: 0, sellPriceUsd: 100, fxRate: 150 }));
+    const set = calcProfit(baseInputs({ purchasePriceJpy: 5000, sellPriceUsd: 100, fxRate: 150 }));
+    expect(unset.decision).toBe("UNSET");
+    expect(["BUY", "CONSIDER", "SKIP"]).toContain(set.decision);
   });
 
   it("赤字: 利益マイナス → SKIP・スコア0", () => {

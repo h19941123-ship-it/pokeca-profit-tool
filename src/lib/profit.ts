@@ -17,14 +17,22 @@
 // ※ 価格は変動するため、本結果は入力値に基づく「予想」であり保証ではない。
 // =============================================================================
 
-/** 仕入れ判定の区分。 */
-export type Decision = "BUY" | "CONSIDER" | "SKIP";
+/**
+ * 仕入れ判定の区分。
+ *
+ * UNSET は「仕入れ価格が未入力」。以前は仕入れ0円を「タダで手に入る＝
+ * 利益率が無限大」と解釈して仕入れ候補にしていたが、実際の使い方では
+ * 0円は「まだ価格を調べていない」を意味する。候補リストを一括登録すると
+ * 全部が「仕入れ候補」に見えてしまい、判定として機能しなかった。
+ */
+export type Decision = "BUY" | "CONSIDER" | "SKIP" | "UNSET";
 
 /** 判定区分の日本語ラベル。 */
 export const DECISION_LABELS: Record<Decision, string> = {
   BUY: "仕入れ候補",
   CONSIDER: "検討",
   SKIP: "見送り",
+  UNSET: "未設定",
 };
 
 /** 利益計算に必要な入力（すべて解決済みの値を渡す）。 */
@@ -157,11 +165,12 @@ function decide(
   const considerPct = safeNum(inputs.thresholdConsiderPct);
   const minProfitJpy = safeNum(inputs.minProfitJpy);
 
+  // 仕入れ価格が未入力なら判定しない。0円を「タダで仕入れた」と解釈すると
+  // 利益率が無限大になり、調べていないカードが全部「仕入れ候補」に見える。
+  if (profitRate === null) return "UNSET";
+
   // 最低利益額の下限を満たさない or 赤字 → 見送り
   if (profitJpy < minProfitJpy || profitJpy <= 0) return "SKIP";
-
-  // 仕入れ0円で利益プラス（利益率=null）→ ROI 無限大とみなし候補
-  if (profitRate === null) return "BUY";
 
   if (profitRate >= buyPct) return "BUY";
   if (profitRate >= considerPct) return "CONSIDER";
@@ -181,9 +190,9 @@ function calcScore(
   profitRate: number | null,
   inputs: ProfitInputs,
 ): number {
+  // 仕入れ価格が未入力なら評価できない
+  if (profitRate === null) return 0;
   if (profitJpy <= 0) return 0;
-  // 仕入れ0円で利益プラス → ROI 無限大。高評価だが満点にはしない。
-  if (profitRate === null) return 80;
 
   const buyPct = Math.max(safeNum(inputs.thresholdBuyPct), 0.01);
   const considerPct = clamp(safeNum(inputs.thresholdConsiderPct), 0.01, buyPct);
