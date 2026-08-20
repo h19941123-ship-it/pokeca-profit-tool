@@ -1,7 +1,8 @@
 // レポート集計: 実現損益（売却済）・月次・仕入先別ランキング。
 
 import type { Card, Settings } from "@/generated/prisma/client";
-import { computeCardProfit, computeRealizedProfit } from "@/lib/cardProfit";
+import { computeCardProfit, computeRealizedProfit, buildForecastItem } from "@/lib/cardProfit";
+import { summarizeForecast, diffForecast, type ForecastSummary, type ForecastDiff } from "@/lib/forecast";
 
 export interface MonthlyRow {
   month: string; // YYYY-MM
@@ -14,11 +15,22 @@ export interface SupplierRow {
   avgRatePct: number | null; // 予想利益率の平均
   totalExpectedProfitJpy: number; // 予想利益合計（在庫込）
 }
+/** 売却済カード1件分の「予想 vs 実績」。 */
+export interface ForecastRow {
+  id: number;
+  name: string;
+  soldAt: Date | null;
+  predictedSellUsd: number;
+  soldPriceUsd: number;
+  diff: ForecastDiff;
+}
 export interface ReportData {
   soldCount: number;
   realizedTotalJpy: number;
   monthly: MonthlyRow[];
   suppliers: SupplierRow[];
+  forecast: ForecastSummary; // 予想の精度
+  forecastRows: ForecastRow[]; // 明細（新しい順）
 }
 
 function ym(d: Date): string {
@@ -43,6 +55,21 @@ export function buildReports(cards: Card[], settings: Settings): ReportData {
     .map(([month, v]) => ({ month, ...v }))
     .sort((a, b) => (a.month < b.month ? 1 : -1));
 
+  // 予想と実績のズレ（比較できるのは予想を固定できていた売却済カードだけ）
+  const items = sold.map((c) => buildForecastItem(c, settings));
+  const forecast = summarizeForecast(items);
+  const forecastRows: ForecastRow[] = sold
+    .map((c, i) => ({
+      id: c.id,
+      name: c.name,
+      soldAt: c.soldAt,
+      predictedSellUsd: c.predictedSellUsd,
+      soldPriceUsd: c.soldPriceUsd,
+      diff: diffForecast(items[i]),
+    }))
+    .filter((r) => r.predictedSellUsd > 0 && r.soldPriceUsd > 0)
+    .sort((a, b) => (b.soldAt?.getTime() ?? 0) - (a.soldAt?.getTime() ?? 0));
+
   // 仕入先別ランキング（予想利益率）
   const supMap = new Map<string, { count: number; rateSum: number; rateCount: number; total: number }>();
   for (const c of cards) {
@@ -66,5 +93,5 @@ export function buildReports(cards: Card[], settings: Settings): ReportData {
     }))
     .sort((a, b) => (b.avgRatePct ?? -Infinity) - (a.avgRatePct ?? -Infinity));
 
-  return { soldCount: sold.length, realizedTotalJpy, monthly, suppliers };
+  return { soldCount: sold.length, realizedTotalJpy, monthly, suppliers, forecast, forecastRows };
 }

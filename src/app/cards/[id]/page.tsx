@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
-import { computeCardProfit, resolveFxRate, computeCardAdvice, computeCardChannel, resolveShipping } from "@/lib/cardProfit";
+import { computeCardProfit, resolveFxRate, computeCardAdvice, computeCardChannel, resolveShipping, buildForecastItem } from "@/lib/cardProfit";
+import { diffForecast, isComparable } from "@/lib/forecast";
 import { computeCardGradingBoth, PLAN_LABELS, type GradingPlan } from "@/lib/cardGrading";
 import type { GradingResult } from "@/lib/grading";
 import { PriceHistoryChart, type HistoryDatum } from "@/components/PriceHistoryChart";
@@ -43,6 +44,12 @@ export default async function CardDetailPage(props: PageProps<"/cards/[id]">) {
 
   const profit = computeCardProfit(card, settings);
   const bundle = resolveShipping(card, settings);
+  // 予想と実績の突き合わせ（予想を固定できていた売却済カードだけ）
+  const forecastItem = buildForecastItem(card, settings);
+  const forecast =
+    card.status === "SOLD" && isComparable(forecastItem)
+      ? { item: forecastItem, diff: diffForecast(forecastItem) }
+      : null;
   const fxRate = resolveFxRate(card, settings);
   const gradingBoth = computeCardGradingBoth(card, settings);
   const grading = gradingBoth.selected === "EXPRESS" ? gradingBoth.express : gradingBoth.regular;
@@ -116,6 +123,36 @@ export default async function CardDetailPage(props: PageProps<"/cards/[id]">) {
               </>
             )}
           </dl>
+
+          {forecast && (
+            <div className="mt-4 border-t border-black/5 pt-3 dark:border-white/10">
+              <div className="text-xs text-black/50 dark:text-white/50">予想と実績</div>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+                <span>
+                  売る前の見込み <b className="tabular-nums">{usd(forecast.item.predictedSellUsd)}</b>
+                </span>
+                <span>→</span>
+                <span>
+                  実際 <b className="tabular-nums">{usd(forecast.item.soldPriceUsd)}</b>
+                </span>
+                <span
+                  className={
+                    forecast.diff.priceDiffUsd >= 0
+                      ? "font-semibold text-green-700 dark:text-green-400"
+                      : "font-semibold text-red-600"
+                  }
+                >
+                  {pct(forecast.diff.priceDiffPct)}
+                </span>
+                <span className="text-black/60 dark:text-white/60">
+                  利益の差{" "}
+                  <b className={`tabular-nums ${forecast.diff.profitDiffJpy >= 0 ? "text-green-700 dark:text-green-400" : "text-red-600"}`}>
+                    {yen(forecast.diff.profitDiffJpy)}
+                  </b>
+                </span>
+              </div>
+            </div>
+          )}
 
           {tags.length > 0 && (
             <div className="mt-4 border-t border-black/5 pt-3 dark:border-white/10">

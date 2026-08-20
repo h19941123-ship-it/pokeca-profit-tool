@@ -4,7 +4,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { buildReports } from "@/lib/reports";
-import { yen, pct } from "@/lib/format";
+import { BIAS_LABELS, MIN_SAMPLES } from "@/lib/forecast";
+import { yen, usd, pct, ymd } from "@/lib/format";
 
 export const metadata = { title: "レポート | ポケカ利益判定ツール" };
 
@@ -23,6 +24,54 @@ export default async function ReportsPage() {
         <Tile label="売却済 件数" value={`${r.soldCount} 件`} />
         <Tile label="実現損益（累計）" value={yen(r.realizedTotalJpy)} accent={r.realizedTotalJpy >= 0} />
       </div>
+
+      <section className="mb-8">
+        <h2 className="mb-2 text-base font-semibold">予想の精度（予想 vs 実績）</h2>
+        {r.forecast.count === 0 ? (
+          <p className="text-sm text-black/50 dark:text-white/50">
+            比較できる売却実績がまだありません。カードを「出品中」にした時点の販売価格が
+            予想として記録され、売却済にして実売却額を入れると突き合わせます。
+          </p>
+        ) : (
+          <>
+            <div className="mb-3 rounded-md border border-black/10 p-3 text-sm dark:border-white/15">
+              {r.forecast.reliable ? (
+                <p>
+                  <b>{BIAS_LABELS[r.forecast.bias!]}</b>：実売価格は予想に対して中央値で{" "}
+                  <b className="tabular-nums">{pct(r.forecast.medianPriceDiffPct)}</b> でした（{r.forecast.count}件）。
+                  {r.forecast.bias === "OPTIMISTIC" && " 判定しきい値を上げるか、販売価格を控えめに見積もると精度が上がります。"}
+                  {r.forecast.bias === "PESSIMISTIC" && " 見送っていたカードの中に、実は仕入れられるものがあるかもしれません。"}
+                </p>
+              ) : (
+                <p className="text-black/60 dark:text-white/60">
+                  比較できたのは <b>{r.forecast.count}件</b> です。
+                  <b>{MIN_SAMPLES}件</b>を超えるまでは偶然と区別がつかないため、傾向としては扱いません。
+                  参考値：中央値 <span className="tabular-nums">{pct(r.forecast.medianPriceDiffPct)}</span>
+                </p>
+              )}
+              <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+                予想より高く売れた {r.forecast.overCount}件 ／ 安かった {r.forecast.underCount}件 ／
+                ほぼ予想どおり {r.forecast.onCount}件 ・ 利益の差の合計{" "}
+                <span className="tabular-nums">{yen(r.forecast.totalProfitDiffJpy)}</span>
+              </p>
+            </div>
+            <Table headers={["カード", "売却日", "予想", "実績", "差", "利益の差"]}>
+              {r.forecastRows.map((row) => (
+                <tr key={row.id} className="border-b border-black/5 dark:border-white/10">
+                  <Td>
+                    <Link href={`/cards/${row.id}`} className="text-blue-600 hover:underline">{row.name}</Link>
+                  </Td>
+                  <Td right>{row.soldAt ? ymd(row.soldAt) : "—"}</Td>
+                  <Td right>{usd(row.predictedSellUsd)}</Td>
+                  <Td right>{usd(row.soldPriceUsd)}</Td>
+                  <Td right accent={row.diff.priceDiffUsd >= 0}>{pct(row.diff.priceDiffPct)}</Td>
+                  <Td right accent={row.diff.profitDiffJpy >= 0}>{yen(row.diff.profitDiffJpy)}</Td>
+                </tr>
+              ))}
+            </Table>
+          </>
+        )}
+      </section>
 
       <section className="mb-8">
         <h2 className="mb-2 text-base font-semibold">月次 実現損益</h2>

@@ -10,6 +10,7 @@ import { parseCardForm } from "@/lib/validation";
 import { getSettings } from "@/lib/settings";
 import { computeCardProfit } from "@/lib/cardProfit";
 import { recordPriceHistory } from "@/lib/priceHistory";
+import { nextPredictedSellUsd } from "@/lib/forecast";
 import { parseImportText } from "@/lib/csvImport";
 import type { BuybackFormState } from "@/app/cards/buyback/buybackState";
 import { logger } from "@/lib/logger";
@@ -62,6 +63,12 @@ export async function createCard(
         psa9SellUsd: data.psa9SellUsd,
         psa10Prob: data.psa10Prob,
         gradingPlan: data.gradingPlan,
+        predictedSellUsd: nextPredictedSellUsd({
+          current: 0,
+          previousSellUsd: 0, // 新規なので更新前の値は無い
+          nextSellUsd: data.sellPriceUsd,
+          nextStatus: data.status,
+        }),
         status: data.status,
         soldPriceUsd: data.soldPriceUsd,
         soldAt: data.soldAt ?? null,
@@ -186,6 +193,14 @@ export async function updateCard(
 
   try {
     const data = parsed.data;
+    // 予想の固定には「更新前の販売価格」が要る（forecast.ts の説明を参照）。
+    const before = await prisma.card.findUnique({
+      where: { id },
+      select: { sellPriceUsd: true, predictedSellUsd: true },
+    });
+    if (!before) {
+      return { status: "error", message: "対象カードが見つかりませんでした。" };
+    }
     const card = await prisma.card.update({
       where: { id },
       data: {
@@ -211,6 +226,12 @@ export async function updateCard(
         psa9SellUsd: data.psa9SellUsd,
         psa10Prob: data.psa10Prob,
         gradingPlan: data.gradingPlan,
+        predictedSellUsd: nextPredictedSellUsd({
+          current: before.predictedSellUsd,
+          previousSellUsd: before.sellPriceUsd,
+          nextSellUsd: data.sellPriceUsd,
+          nextStatus: data.status,
+        }),
         status: data.status,
         soldPriceUsd: data.soldPriceUsd,
         soldAt: data.soldAt ?? null,

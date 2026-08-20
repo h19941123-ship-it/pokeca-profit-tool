@@ -87,6 +87,7 @@ export async function POST(request: Request): Promise<Response> {
         // 売却済みの記録が落ちるとレポートの実現損益が丸ごと消えるため、
         // 取りこぼしがないよう Card の全列を明示的に扱う。
         domesticBuybackJpy: Math.round(num(c.domesticBuybackJpy)),
+        predictedSellUsd: num(c.predictedSellUsd), // 予想は再計算せずそのまま戻す
         status:
           str(c.status) === "LISTED" || str(c.status) === "SOLD"
             ? (str(c.status) as "LISTED" | "SOLD")

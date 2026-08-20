@@ -6,6 +6,7 @@ import { calcProfit, type ProfitInputs, type ProfitResult } from "@/lib/profit";
 import { maxPurchaseForRate, breakEvenSellUsd } from "@/lib/advice";
 import { compareChannels, type ChannelComparison } from "@/lib/channel";
 import { bundleShipping, type BundledShipping } from "@/lib/shipping";
+import type { ForecastItem } from "@/lib/forecast";
 
 /**
  * このカードの実質送料（まとめ発送の按分後）。画面の内訳表示にも使う。
@@ -86,4 +87,25 @@ export function computeCardChannel(
     card.domesticBuybackJpy,
     settings.minExportGainJpy,
   );
+}
+
+/** 予想時点の利益（固定した予想価格で計算）。実績との比較にだけ使う。 */
+export function computePredictedProfit(card: Card, settings: Settings): ProfitResult {
+  return calcProfit({
+    ...buildProfitInputs(card, settings),
+    sellPriceUsd: card.predictedSellUsd,
+  });
+}
+
+/**
+ * 予想と実績の比較材料を作る。
+ * 手数料・送料・為替はどちらも今の設定で揃え、販売価格の違いだけを残す。
+ */
+export function buildForecastItem(card: Card, settings: Settings): ForecastItem {
+  return {
+    predictedSellUsd: card.predictedSellUsd,
+    soldPriceUsd: card.soldPriceUsd,
+    predictedProfitJpy: computePredictedProfit(card, settings).profitJpy,
+    actualProfitJpy: computeRealizedProfit(card, settings).profitJpy,
+  };
 }

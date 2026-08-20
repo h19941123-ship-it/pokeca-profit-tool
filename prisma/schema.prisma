@@ -60,6 +60,13 @@ model Card {
   psa10Prob    Float  @default(0) // PSA10 になる確率(%)。0なら鑑定シナリオ未設定扱い
   gradingPlan  String @default("REGULAR") // 鑑定プラン: REGULAR / EXPRESS
 
+  // --- 予想の記録（予想と実績のズレを測る）---
+  //   売れた後に販売価格を実売額へ書き換えると「売る前に何円と見込んだか」が
+  //   消えてしまい、予想が当たっていたかを後から確かめられなくなる。
+  //   出品中／売却済に切り替わった時点の販売価格をここへ固定する。
+  //   一度入ったら上書きしない（最初の見込みこそが「予想」なので）。
+  predictedSellUsd Float @default(0) // 売る前に見込んだ販売価格（USD）。0=未記録
+
   // --- 販売ステータス・実績 ---
   status      String    @default("STOCK") // STOCK(仕入済) / LISTED(出品中) / SOLD(売却済)
   soldPriceUsd Float    @default(0) // 実際に売れた価格（USD）
