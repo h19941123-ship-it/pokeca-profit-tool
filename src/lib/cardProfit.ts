@@ -26,14 +26,20 @@ export function resolveShipping(
 
 /** カードと設定から利益計算の入力を作る（為替はカード優先、無ければ設定の既定値）。 */
 export function buildProfitInputs(card: Card, settings: Settings): ProfitInputs {
+  const bundle = resolveShipping(card, settings);
+  // まとめ発送＝同じ買い手の1注文にN枚入る、ということ。荷物が1つなら
+  // 注文単位の費用も1回分しか発生しないので、送料と同じく枚数で割る。
+  //  - eBay定額手数料: 1注文あたり
+  //  - 購入者に請求する送料: 1注文につき1回しか受け取れない
+  const perOrder = Math.max(1, bundle.cards);
   return {
     purchasePriceJpy: card.purchasePriceJpy,
     sellPriceUsd: card.sellPriceUsd,
-    shippingChargedUsd: card.shippingChargedUsd,
+    shippingChargedUsd: card.shippingChargedUsd / perOrder,
     fxRate: card.fxRate ?? settings.defaultFxRate,
-    shippingJpy: resolveShipping(card, settings).perCardJpy,
+    shippingJpy: bundle.perCardJpy,
     ebayFeePct: settings.ebayFeePct,
-    ebayFixedFeeUsd: settings.ebayFixedFeeUsd,
+    ebayFixedFeeUsd: settings.ebayFixedFeeUsd / perOrder,
     paymentFeePct: settings.paymentFeePct,
     fxFeePct: settings.fxFeePct,
     tariffRatePct: settings.tariffRatePct,

@@ -448,9 +448,10 @@ function ScoreCell({ score }: { score: number }) {
   );
 }
 
-/** サマリーパネル（在庫込みの合計）。 */
+/** サマリーパネル（在庫込みの合計。売却済は除く）。 */
 function SummaryPanel({ s }: { s: DashboardSummary }) {
   return (
+    <>
     <section className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
       <SummaryTile label="総仕入額（在庫込）" value={yen(s.totalCostJpy)} />
       <SummaryTile
@@ -468,6 +469,13 @@ function SummaryPanel({ s }: { s: DashboardSummary }) {
         }
       />
     </section>
+    {s.soldCount > 0 && (
+      <p className="-mt-3 mb-5 text-xs text-black/50 dark:text-white/50">
+        売却済 {s.soldCount}件 は上の集計に含めていません（手元に無いため）。実現した損益は{" "}
+        <Link href="/reports" className="text-blue-600 hover:underline">レポート</Link> で見られます。
+      </p>
+    )}
+    </>
   );
 }
 

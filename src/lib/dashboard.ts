@@ -45,16 +45,23 @@ export function buildRows(cards: Card[], settings: Settings): CardRow[] {
   });
 }
 
-/** ダッシュボードのサマリー集計（在庫数を掛けた合計）。 */
+/**
+ * ダッシュボードのサマリー集計（在庫数を掛けた合計）。
+ *
+ * 売却済カードは除外する。手元に無いものを在庫として数えると総仕入額が
+ * 回収済みの分まで膨らみ、予想総利益はレポートの実現損益と二重に計上される。
+ * 一覧には残す（履歴として見たいため）が、集計からは外す。
+ */
 export interface DashboardSummary {
-  totalStock: number; // 総在庫数
-  totalCostJpy: number; // 総仕入額（仕入×在庫）
-  totalExpectedProfitJpy: number; // 予想総利益（利益×在庫）
+  totalStock: number; // 総在庫数（売却済を除く）
+  totalCostJpy: number; // 総仕入額（仕入×在庫・売却済を除く）
+  totalExpectedProfitJpy: number; // 予想総利益（利益×在庫・売却済を除く）
   avgProfitRate: number | null; // 平均利益率（利益率がある行の単純平均）
   buy: number; // 判定別 件数
   consider: number;
   skip: number;
   unset: number; // 仕入れ価格が未入力で判定できない件数
+  soldCount: number; // 集計から外した売却済の件数
 }
 
 /** 全行からサマリーを計算する。 */
@@ -68,8 +75,14 @@ export function summarizeRows(rows: CardRow[]): DashboardSummary {
   let consider = 0;
   let skip = 0;
   let unset = 0;
+  let soldCount = 0;
 
   for (const { card, profit } of rows) {
+    // 売却済は手元に無い。在庫・原価・予想利益・判定のどれにも数えない。
+    if (card.status === "SOLD") {
+      soldCount += 1;
+      continue;
+    }
     const qty = Math.max(card.stock, 0);
     totalStock += qty;
     totalCostJpy += card.purchasePriceJpy * qty;
@@ -88,6 +101,7 @@ export function summarizeRows(rows: CardRow[]): DashboardSummary {
     totalStock,
     totalCostJpy,
     totalExpectedProfitJpy,
+    soldCount,
     avgProfitRate: rateCount > 0 ? Math.round((rateSum / rateCount) * 10) / 10 : null,
     buy,
     consider,

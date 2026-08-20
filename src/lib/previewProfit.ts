@@ -87,14 +87,17 @@ export function buildPreviewInputs(
   raw: PreviewRawValues,
   s: ProfitSettings,
 ): ProfitInputs {
+  const bundle = resolvePreviewShipping(raw, s);
+  // 注文単位の費用も枚数で割る（cardProfit.ts と同じ考え方）
+  const perOrder = Math.max(1, bundle.cards);
   return {
     purchasePriceJpy: n(raw.purchasePriceJpy),
     sellPriceUsd: n(raw.sellPriceUsd),
-    shippingChargedUsd: n(raw.shippingChargedUsd),
+    shippingChargedUsd: n(raw.shippingChargedUsd) / perOrder,
     fxRate: resolvePreviewFxRate(raw, s),
-    shippingJpy: resolvePreviewShipping(raw, s).perCardJpy,
+    shippingJpy: bundle.perCardJpy,
     ebayFeePct: s.ebayFeePct,
-    ebayFixedFeeUsd: s.ebayFixedFeeUsd,
+    ebayFixedFeeUsd: s.ebayFixedFeeUsd / perOrder,
     paymentFeePct: s.paymentFeePct,
     fxFeePct: s.fxFeePct,
     tariffRatePct: s.tariffRatePct,

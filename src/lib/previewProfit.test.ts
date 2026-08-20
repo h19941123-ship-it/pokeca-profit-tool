@@ -102,12 +102,29 @@ describe("まとめ発送がプレビューに効く", () => {
     expect(five.bundle.perCardJpy).toBe(408);
     expect(five.profit.fees.shippingJpy).toBe(408);
     expect(five.profit.profitJpy).toBeGreaterThan(solo.profit.profitJpy);
-    // 送料の差がそのまま利益の差になる
-    expect(five.profit.profitJpy - solo.profit.profitJpy).toBe(1200 - 408);
+    // 差の内訳: 送料 (1200-408=792) ＋ eBay定額手数料の按分 ($0.40×150 の 4/5 = 48)。
+    // 定額手数料は1注文あたりなので、1つの荷物にまとめれば1回しかかからない。
+    expect(five.profit.profitJpy - solo.profit.profitJpy).toBe(792 + 48);
   });
 
   it("枚数1なら従来と同じ送料のまま", () => {
     const raw = { purchasePriceJpy: "4000", sellPriceUsd: "62", shippingJpy: "1200" };
     expect(computePreview(raw, settings).profit.fees.shippingJpy).toBe(1200);
+  });
+});
+
+describe("まとめ発送のときの注文単位の費用", () => {
+  it("購入者に請求する送料は1注文につき1回しか受け取れない", () => {
+    const raw = {
+      purchasePriceJpy: "4000",
+      sellPriceUsd: "62",
+      shippingJpy: "1200",
+      weightGrams: "100",
+      shippingChargedUsd: "10",
+    };
+    const solo = computePreview(raw, settings);
+    const five = computePreview(raw, { ...settings, bundleCards: 5 });
+    // 5枚まとめなら1枚あたりの受取送料は $2 相当。売上は単品より下がる。
+    expect(five.profit.revenueJpy).toBeLessThan(solo.profit.revenueJpy);
   });
 });

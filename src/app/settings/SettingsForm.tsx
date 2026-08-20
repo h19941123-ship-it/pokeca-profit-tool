@@ -180,13 +180,20 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
       {/* --- まとめ発送 --- */}
       <fieldset className="flex min-w-0 flex-col gap-4">
         <legend className="mb-1 text-base font-semibold">まとめ発送（同梱）</legend>
-        <p className="-mt-2 text-xs text-black/60 dark:text-white/60">
-          カードは軽いので、複数枚を1つの封筒で送っても送料はあまり変わりません。
-          いつも何枚くらいをまとめて発送するかを入れると、送料を1枚あたりに割り直して
-          利益を計算します。<b>1 のままだと1枚ずつ送る前提</b>になり、送料を高く見積もります。
-        </p>
+        <div className="-mt-2 rounded-md border border-amber-300/60 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
+          <p className="font-semibold">1 のままにしておくのが安全です。</p>
+          <p className="mt-1">
+            同梱できるのは<b>同じ買い手が複数枚まとめて買ったとき</b>だけです。
+            買い手が違えば宛先が違うので、1枚ずつ別便になります。
+          </p>
+          <p className="mt-1">
+            ここを2以上にすると<b>全カードの送料が一律で安く計算され、利益が実際より多く見えます</b>。
+            仕入れ判断に使うと、買うべきでないカードを買う方向に外れます。
+            まとめ買いが常態化している場合にだけ変更してください。
+          </p>
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Field label="まとめて送る枚数" name="bundleCards" defaultValue={defaults.bundleCards} suffix="枚" hint="1回の発送に入れる枚数。1=1枚ずつ送る" error={e.bundleCards} />
+          <Field label="まとめて送る枚数" name="bundleCards" defaultValue={defaults.bundleCards} suffix="枚" hint="同じ買い手がまとめ買いする枚数。通常は1" error={e.bundleCards} />
         </div>
       </fieldset>
 
