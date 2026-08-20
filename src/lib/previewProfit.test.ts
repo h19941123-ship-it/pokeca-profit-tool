@@ -17,6 +17,7 @@ const settings: ProfitSettings = {
   thresholdBuyPct: 30,
   thresholdConsiderPct: 15,
   minProfitJpy: 500,
+  bundleCards: 1, // 既定は1枚ずつ発送（従来どおりの計算）
 };
 
 describe("resolvePreviewFxRate", () => {
@@ -84,5 +85,29 @@ describe("computePreview", () => {
     expect(r.maxPurchaseJpy).toBe(6446);
     expect(r.breakEvenSellUsd).toBeGreaterThan(0);
     expect(r.targetRatePct).toBe(30);
+  });
+});
+
+describe("まとめ発送がプレビューに効く", () => {
+  it("枚数を増やすと送料が下がり利益が増える", () => {
+    const raw = {
+      purchasePriceJpy: "4000",
+      sellPriceUsd: "62",
+      shippingJpy: "1200",
+      weightGrams: "100",
+    };
+    const solo = computePreview(raw, settings);
+    const five = computePreview(raw, { ...settings, bundleCards: 5 });
+
+    expect(five.bundle.perCardJpy).toBe(408);
+    expect(five.profit.fees.shippingJpy).toBe(408);
+    expect(five.profit.profitJpy).toBeGreaterThan(solo.profit.profitJpy);
+    // 送料の差がそのまま利益の差になる
+    expect(five.profit.profitJpy - solo.profit.profitJpy).toBe(1200 - 408);
+  });
+
+  it("枚数1なら従来と同じ送料のまま", () => {
+    const raw = { purchasePriceJpy: "4000", sellPriceUsd: "62", shippingJpy: "1200" };
+    expect(computePreview(raw, settings).profit.fees.shippingJpy).toBe(1200);
   });
 });

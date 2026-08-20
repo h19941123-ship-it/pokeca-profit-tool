@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
-import { computeCardProfit, resolveFxRate, computeCardAdvice, computeCardChannel } from "@/lib/cardProfit";
+import { computeCardProfit, resolveFxRate, computeCardAdvice, computeCardChannel, resolveShipping } from "@/lib/cardProfit";
 import { computeCardGradingBoth, PLAN_LABELS, type GradingPlan } from "@/lib/cardGrading";
 import type { GradingResult } from "@/lib/grading";
 import { PriceHistoryChart, type HistoryDatum } from "@/components/PriceHistoryChart";
@@ -42,6 +42,7 @@ export default async function CardDetailPage(props: PageProps<"/cards/[id]">) {
   });
 
   const profit = computeCardProfit(card, settings);
+  const bundle = resolveShipping(card, settings);
   const fxRate = resolveFxRate(card, settings);
   const gradingBoth = computeCardGradingBoth(card, settings);
   const grading = gradingBoth.selected === "EXPRESS" ? gradingBoth.express : gradingBoth.regular;
@@ -87,7 +88,11 @@ export default async function CardDetailPage(props: PageProps<"/cards/[id]">) {
         <Stat label="利益率" value={pct(profit.profitRate)} />
         <Stat label="予想売上" value={yen(profit.revenueJpy)} />
         <Stat label="販売手数料" value={yen(profit.fees.ebayJpy + profit.fees.paymentJpy + profit.fees.fxJpy)} />
-        <Stat label="送料" value={yen(profit.fees.shippingJpy)} />
+        <Stat
+          label={bundle.cards > 1 ? `送料（${bundle.cards}枚まとめ）` : "送料"}
+          value={yen(profit.fees.shippingJpy)}
+          note={bundle.cards > 1 ? `1枚で送ると ${yen(bundle.soloJpy)}` : undefined}
+        />
         <Stat label="関税(DDP)" value={yen(profit.fees.tariffJpy)} />
         <Stat label="為替" value={`${fxRate} 円/USD`} />
         <Stat label="判定 / スコア" value={`${profit.decisionLabel} / ${profit.score}`} />
@@ -361,13 +366,14 @@ function Meta({ label, value }: { label: string; value: string | null | undefine
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+function Stat({ label, value, accent, note }: { label: string; value: string; accent?: boolean; note?: string }) {
   return (
     <div className="rounded-md border border-black/10 p-3 dark:border-white/15">
       <div className="text-xs text-black/50 dark:text-white/50">{label}</div>
       <div className={`font-semibold ${accent === undefined ? "" : accent ? "text-green-700 dark:text-green-400" : "text-red-600"}`}>
         {value}
       </div>
+      {note && <div className="mt-0.5 text-[11px] text-black/45 dark:text-white/45">{note}</div>}
     </div>
   );
 }

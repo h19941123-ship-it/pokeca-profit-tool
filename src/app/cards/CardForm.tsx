@@ -131,6 +131,7 @@ export function CardForm({
           shippingChargedUsd: get("shippingChargedUsd"),
           fxRate: get("fxRate"),
           shippingJpy: get("shippingJpy"),
+          weightGrams: get("weightGrams"),
         },
         settings,
       ),

@@ -5,6 +5,23 @@ import type { Card, Settings } from "@/generated/prisma/client";
 import { calcProfit, type ProfitInputs, type ProfitResult } from "@/lib/profit";
 import { maxPurchaseForRate, breakEvenSellUsd } from "@/lib/advice";
 import { compareChannels, type ChannelComparison } from "@/lib/channel";
+import { bundleShipping, type BundledShipping } from "@/lib/shipping";
+
+/**
+ * このカードの実質送料（まとめ発送の按分後）。画面の内訳表示にも使う。
+ * 素体・鑑定スラブで重量が違うため、どちらの送料を按分するかを呼び出し側が選べる。
+ */
+export function resolveShipping(
+  card: Card,
+  settings: Settings,
+  opts?: { shippingJpy?: number; weightGrams?: number | null },
+): BundledShipping {
+  return bundleShipping(
+    opts?.shippingJpy ?? card.shippingJpy,
+    opts?.weightGrams !== undefined ? opts.weightGrams : card.weightGrams,
+    settings.bundleCards,
+  );
+}
 
 /** カードと設定から利益計算の入力を作る（為替はカード優先、無ければ設定の既定値）。 */
 export function buildProfitInputs(card: Card, settings: Settings): ProfitInputs {
@@ -13,7 +30,7 @@ export function buildProfitInputs(card: Card, settings: Settings): ProfitInputs 
     sellPriceUsd: card.sellPriceUsd,
     shippingChargedUsd: card.shippingChargedUsd,
     fxRate: card.fxRate ?? settings.defaultFxRate,
-    shippingJpy: card.shippingJpy,
+    shippingJpy: resolveShipping(card, settings).perCardJpy,
     ebayFeePct: settings.ebayFeePct,
     ebayFixedFeeUsd: settings.ebayFixedFeeUsd,
     paymentFeePct: settings.paymentFeePct,

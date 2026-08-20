@@ -3,6 +3,7 @@ import {
   airpacketUsYen,
   estimateShippingJpy,
   calcUsShipping,
+  bundleShipping,
 } from "./shipping";
 
 describe("airpacketUsYen / estimateShippingJpy", () => {
@@ -49,5 +50,57 @@ describe("calcUsShipping (DDP・買い手への請求送料USD)", () => {
     const { shippingUsd } = calcUsShipping({ priceUsd: 25, fxRate: 0 });
     expect(Number.isFinite(shippingUsd)).toBe(true);
     expect(shippingUsd).toBe(13);
+  });
+});
+
+describe("bundleShipping（まとめ発送の按分）", () => {
+  it("1枚だけなら按分しない", () => {
+    const r = bundleShipping(1200, 100, 1);
+    expect(r.perCardJpy).toBe(1200);
+    expect(r.cards).toBe(1);
+  });
+
+  it("100gのカードを5枚まとめると 500g=¥2,040 → 1枚あたり¥408", () => {
+    const r = bundleShipping(1200, 100, 5);
+    expect(r.bundleJpy).toBe(2040);
+    expect(r.perCardJpy).toBe(408);
+    expect(r.cards).toBe(5);
+    expect(r.capped).toBe(false);
+  });
+
+  it("按分後は必ず単品送料より安いか同額になる", () => {
+    for (const n of [2, 3, 4, 5, 8, 10]) {
+      const r = bundleShipping(1200, 100, n);
+      expect(r.perCardJpy).toBeLessThanOrEqual(r.soloJpy);
+    }
+  });
+
+  it("重量が未入力なら送料から逆算する（¥1,200 → 100g帯）", () => {
+    const r = bundleShipping(1200, null, 5);
+    expect(r.perCardJpy).toBe(408);
+  });
+
+  it("1個口の上限(1000g)を超える枚数は頭打ちにする", () => {
+    // スラブ250g × 5枚 = 1250g は1個口で送れない → 4枚(1000g)で頭打ち
+    const r = bundleShipping(1620, 250, 5);
+    expect(r.cards).toBe(4);
+    expect(r.capped).toBe(true);
+    expect(r.bundleJpy).toBe(3090);
+  });
+
+  it("重量が分からず送料も料金表の外なら按分しない（利益を過大に見せない）", () => {
+    const r = bundleShipping(9000, null, 5);
+    expect(r.perCardJpy).toBe(9000);
+    expect(r.cards).toBe(1);
+  });
+
+  it("送料0円は0円のまま", () => {
+    expect(bundleShipping(0, 100, 5).perCardJpy).toBe(0);
+  });
+
+  it("不正な枚数（0・負・NaN）は1枚として扱う", () => {
+    for (const n of [0, -3, NaN]) {
+      expect(bundleShipping(1200, 100, n).perCardJpy).toBe(1200);
+    }
   });
 });

@@ -110,6 +110,12 @@ model Settings {
   //   「国内で売っても大差ない」と判定して手間を避けられるようにする。
   minExportGainJpy Int @default(1000) // 海外に出す価値があると見なす最低差額（円）
 
+  // --- まとめ発送（同梱）---
+  //   カードは軽いので複数枚を1つの封筒で送っても重量帯がほとんど変わらない。
+  //   1枚ずつ送る前提だと送料を数倍に見積もり、利益の出るカードを見送ってしまう。
+  //   1 = 従来どおり1枚ずつ発送。
+  bundleCards Int @default(1) // 1回の発送でまとめる枚数
+
   // --- 通知（アラート）のしきい値 ---
   notifyProfitRatePct  Float @default(30) // この利益率以上でアラート
   notifyPriceChangePct Float @default(10) // 価格がこの%以上変動したらアラート

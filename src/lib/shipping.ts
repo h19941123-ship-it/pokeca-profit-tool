@@ -95,3 +95,84 @@ export function calcUsShipping({
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
+
+// =============================================================================
+// (C) まとめ発送（同梱）の按分
+//
+// カードは軽いので、複数枚を1つの封筒に入れても重量帯がほとんど変わらない。
+// 例) 100g 1枚=¥1,200 / 100g×5枚=500g=¥2,040 → 1枚あたり¥408。
+// 1枚ずつ送る前提で計算すると送料を約3倍に見積もることになり、
+// 実際には利益が出るカードを「見送り」と判定してしまう。
+// =============================================================================
+
+/** 料金表の上限重量(g)。これを超える荷物は1個口では送れない前提で扱う。 */
+export const AIRPACKET_MAX_GRAMS =
+  AIRPACKET_US_YEN[AIRPACKET_US_YEN.length - 1][0];
+
+/**
+ * 送料(円)から梱包後重量(g)を逆算する。
+ * 重量が未入力で送料だけ手入力されているカードのために、
+ * 「その額で送れる最小の重量帯」を代用の重量として返す。
+ * 料金表の上限を超える額（エアパケット以外の手段）は null。
+ */
+export function impliedWeightGrams(shippingJpy: number): number | null {
+  if (!Number.isFinite(shippingJpy) || shippingJpy <= 0) return null;
+  for (const [maxG, yen] of AIRPACKET_US_YEN) {
+    if (shippingJpy <= yen) return maxG;
+  }
+  return null;
+}
+
+/** まとめ発送の内訳。画面で「なぜこの送料なのか」を説明するために全部返す。 */
+export interface BundledShipping {
+  perCardJpy: number; // 按分後の1枚あたり送料（利益計算で使う額）
+  bundleJpy: number; // 1回の発送にかかる送料の合計
+  soloJpy: number; // 1枚だけで送った場合の送料（比較用）
+  cards: number; // 実際にまとめられた枚数
+  requested: number; // 設定上の希望枚数
+  capped: boolean; // 重量上限で枚数を減らしたか
+}
+
+/**
+ * まとめ発送したときの1枚あたり送料を求める。
+ *
+ * 重量は「カードの入力値 → 送料からの逆算」の順に決める。どちらも分からない場合は
+ * 按分せず元の送料を返す。割り引いた額を勝手に使うと利益を過大に見せてしまうため、
+ * 不明なときは安全側（1枚ずつ送る前提）に倒す。
+ */
+export function bundleShipping(
+  shippingJpy: number,
+  weightGrams: number | null | undefined,
+  bundleCards: number,
+): BundledShipping {
+  const solo = Math.max(0, Math.round(Number.isFinite(shippingJpy) ? shippingJpy : 0));
+  const requested = Math.max(1, Math.floor(Number.isFinite(bundleCards) ? bundleCards : 1) || 1);
+  const none: BundledShipping = {
+    perCardJpy: solo,
+    bundleJpy: solo,
+    soloJpy: solo,
+    cards: 1,
+    requested,
+    capped: false,
+  };
+  if (requested <= 1 || solo <= 0) return none;
+
+  const unit =
+    weightGrams && weightGrams > 0 ? weightGrams : impliedWeightGrams(solo);
+  if (!unit) return none; // 重量不明 → 按分しない
+
+  // 1個口に収まる枚数で頭打ちにする。超過分は別便になり送料が別途かかるため。
+  const fit = Math.floor(AIRPACKET_MAX_GRAMS / unit);
+  const cards = Math.max(1, Math.min(requested, fit));
+  if (cards <= 1) return none;
+
+  const bundleJpy = airpacketUsYen(unit * cards);
+  return {
+    perCardJpy: Math.round(bundleJpy / cards),
+    bundleJpy,
+    soloJpy: solo,
+    cards,
+    requested,
+    capped: cards < requested,
+  };
+}

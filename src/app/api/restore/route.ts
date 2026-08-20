@@ -44,6 +44,8 @@ export async function POST(request: Request): Promise<Response> {
           thresholdBuyPct: num(s.thresholdBuyPct, 30),
           thresholdConsiderPct: num(s.thresholdConsiderPct, 20),
           minProfitJpy: Math.round(num(s.minProfitJpy, 0)),
+          minExportGainJpy: Math.round(num(s.minExportGainJpy, 1000)),
+          bundleCards: Math.max(1, Math.round(num(s.bundleCards, 1))),
           notifyProfitRatePct: num(s.notifyProfitRatePct, 30),
           notifyPriceChangePct: num(s.notifyPriceChangePct, 10),
           gradingFeeRegularUsd: num(s.gradingFeeRegularUsd, 79.99),

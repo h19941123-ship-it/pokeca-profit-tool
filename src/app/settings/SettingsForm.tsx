@@ -63,6 +63,7 @@ export interface SettingsDefaults {
   thresholdConsiderPct: number;
   minProfitJpy: number;
   minExportGainJpy: number;
+  bundleCards: number;
   notifyProfitRatePct: number;
   notifyPriceChangePct: number;
   gradingFeeRegularUsd: number;
@@ -173,6 +174,19 @@ export function SettingsForm({ defaults }: { defaults: SettingsDefaults }) {
             hint="カードごとに為替を指定しない場合に使う値。ボタンで現在レートを取得できます。"
             error={e.defaultFxRate}
           />
+        </div>
+      </fieldset>
+
+      {/* --- まとめ発送 --- */}
+      <fieldset className="flex min-w-0 flex-col gap-4">
+        <legend className="mb-1 text-base font-semibold">まとめ発送（同梱）</legend>
+        <p className="-mt-2 text-xs text-black/60 dark:text-white/60">
+          カードは軽いので、複数枚を1つの封筒で送っても送料はあまり変わりません。
+          いつも何枚くらいをまとめて発送するかを入れると、送料を1枚あたりに割り直して
+          利益を計算します。<b>1 のままだと1枚ずつ送る前提</b>になり、送料を高く見積もります。
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <Field label="まとめて送る枚数" name="bundleCards" defaultValue={defaults.bundleCards} suffix="枚" hint="1回の発送に入れる枚数。1=1枚ずつ送る" error={e.bundleCards} />
         </div>
       </fieldset>
 

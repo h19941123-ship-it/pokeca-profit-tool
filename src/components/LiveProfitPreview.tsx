@@ -86,8 +86,14 @@ export function LiveProfitPreview({ preview }: { preview: PreviewResult }) {
           </span>
           <span>
             手数料 {yen(preview.sellingFeeJpy)} ／ 送料{" "}
-            {yen(profit.fees.shippingJpy)} ／ 梱包 {yen(profit.fees.packingJpy)}{" "}
-            ／ 為替 {preview.fxRate}
+            {yen(profit.fees.shippingJpy)}
+            {preview.bundle.cards > 1 && (
+              <span className="text-black/45 dark:text-white/45">
+                {" "}
+                （{preview.bundle.cards}枚まとめ・単品 {yen(preview.bundle.soloJpy)}）
+              </span>
+            )}{" "}
+            ／ 梱包 {yen(profit.fees.packingJpy)} ／ 為替 {preview.fxRate}
           </span>
         </div>
       )}

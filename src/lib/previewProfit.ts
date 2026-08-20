@@ -11,6 +11,7 @@
 import type { Settings } from "@/generated/prisma/client";
 import { calcProfit, type ProfitInputs, type ProfitResult } from "@/lib/profit";
 import { maxPurchaseForRate, breakEvenSellUsd } from "@/lib/advice";
+import { bundleShipping, type BundledShipping } from "@/lib/shipping";
 
 /** クライアントに渡す設定の最小セット（Settings 全体を渡さない）。 */
 export interface ProfitSettings {
@@ -25,6 +26,7 @@ export interface ProfitSettings {
   thresholdBuyPct: number;
   thresholdConsiderPct: number;
   minProfitJpy: number;
+  bundleCards: number;
 }
 
 /** DB の Settings から計算に必要な項目だけ取り出す。 */
@@ -41,6 +43,7 @@ export function pickProfitSettings(s: Settings): ProfitSettings {
     thresholdBuyPct: s.thresholdBuyPct,
     thresholdConsiderPct: s.thresholdConsiderPct,
     minProfitJpy: s.minProfitJpy,
+    bundleCards: s.bundleCards,
   };
 }
 
@@ -51,6 +54,7 @@ export interface PreviewRawValues {
   shippingChargedUsd?: string | null;
   fxRate?: string | null;
   shippingJpy?: string | null;
+  weightGrams?: string | null;
 }
 
 /** 文字列を数値に。空欄・不正値は 0。 */
@@ -69,6 +73,15 @@ export function resolvePreviewFxRate(
   return v > 0 ? v : s.defaultFxRate;
 }
 
+/** 入力中のフォームに対するまとめ発送の按分。 */
+export function resolvePreviewShipping(
+  raw: PreviewRawValues,
+  s: ProfitSettings,
+): BundledShipping {
+  const w = n(raw.weightGrams);
+  return bundleShipping(n(raw.shippingJpy), w > 0 ? w : null, s.bundleCards);
+}
+
 /** フォームの生値＋設定から calcProfit の入力を作る。 */
 export function buildPreviewInputs(
   raw: PreviewRawValues,
@@ -79,7 +92,7 @@ export function buildPreviewInputs(
     sellPriceUsd: n(raw.sellPriceUsd),
     shippingChargedUsd: n(raw.shippingChargedUsd),
     fxRate: resolvePreviewFxRate(raw, s),
-    shippingJpy: n(raw.shippingJpy),
+    shippingJpy: resolvePreviewShipping(raw, s).perCardJpy,
     ebayFeePct: s.ebayFeePct,
     ebayFixedFeeUsd: s.ebayFixedFeeUsd,
     paymentFeePct: s.paymentFeePct,
@@ -101,6 +114,7 @@ export interface PreviewResult {
   maxPurchaseJpy: number | null; // 目標利益率を出せる上限仕入れ額
   breakEvenSellUsd: number | null; // 赤字にならない販売価格の下限
   targetRatePct: number; // 目標利益率（＝仕入れ候補しきい値）
+  bundle: BundledShipping; // まとめ発送の内訳（送料の説明用）
   /** 販売価格が未入力（0）→ まだ判定する材料がない。 */
   empty: boolean;
 }
@@ -120,6 +134,7 @@ export function computePreview(
     maxPurchaseJpy: maxPurchaseForRate(inputs, s.thresholdBuyPct),
     breakEvenSellUsd: breakEvenSellUsd(inputs),
     targetRatePct: s.thresholdBuyPct,
+    bundle: resolvePreviewShipping(raw, s),
     empty: inputs.sellPriceUsd <= 0 && inputs.purchasePriceJpy <= 0,
   };
 }

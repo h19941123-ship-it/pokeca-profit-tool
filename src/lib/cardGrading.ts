@@ -2,7 +2,7 @@
 // 鑑定料はプラン（レギュラー / エクスプレス）で切り替える。
 
 import type { Card, Settings } from "@/generated/prisma/client";
-import { resolveFxRate } from "@/lib/cardProfit";
+import { resolveFxRate, resolveShipping } from "@/lib/cardProfit";
 import { calcGrading, type GradingResult, type FeeBase } from "@/lib/grading";
 
 /** 鑑定プラン。 */
@@ -27,7 +27,13 @@ export function gradingFeeForPlan(settings: Settings, plan: GradingPlan): number
 /** 手数料・為替・送料などの共通ベースを作る（鑑定時はスラブ送料を使う）。 */
 function feeBase(card: Card, settings: Settings): FeeBase {
   // 鑑定スラブは素体より重い。gradedShippingJpy があればそれを、無ければ素体送料を流用。
-  const slabShippingJpy = card.gradedShippingJpy > 0 ? card.gradedShippingJpy : card.shippingJpy;
+  const soloSlabJpy = card.gradedShippingJpy > 0 ? card.gradedShippingJpy : card.shippingJpy;
+  // まとめ発送の按分はスラブにも効く。ただし素体より重いので、1個口に収まる枚数は
+  // bundleShipping 側で自動的に少なくなる（重量はスラブ送料から逆算する）。
+  const slabShippingJpy = resolveShipping(card, settings, {
+    shippingJpy: soloSlabJpy,
+    weightGrams: null,
+  }).perCardJpy;
   return {
     shippingChargedUsd: card.shippingChargedUsd,
     fxRate: resolveFxRate(card, settings),
