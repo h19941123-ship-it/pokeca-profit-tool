@@ -12,8 +12,8 @@ const SETTINGS_ID = 1;
  * 設定を取得する。無ければ既定値で作成して返す。
  */
 export async function getSettings(): Promise<Settings> {
-  // better-sqlite3 は同期的に結果を返すため、これが無いとビルド時の
-  // プリレンダリングで設定値が焼き込まれ、設定を変えても画面に反映されない
+  // これが無いとビルド時のプリレンダリングで設定値が焼き込まれ、
+  // 設定を変えても画面に反映されない
   // （/settings・/reports・/cards/new が静的ページ扱いになる）。
   await connection();
   return prisma.settings.upsert({

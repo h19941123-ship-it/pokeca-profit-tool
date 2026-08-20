@@ -81,6 +81,18 @@ export async function POST(request: Request): Promise<Response> {
         psa9SellUsd: num(c.psa9SellUsd),
         psa10Prob: num(c.psa10Prob),
         gradingPlan: str(c.gradingPlan) === "EXPRESS" ? "EXPRESS" : "REGULAR",
+        // 以下はバックアップには入っているのに復元で捨てていた項目。
+        // 売却済みの記録が落ちるとレポートの実現損益が丸ごと消えるため、
+        // 取りこぼしがないよう Card の全列を明示的に扱う。
+        domesticBuybackJpy: Math.round(num(c.domesticBuybackJpy)),
+        status:
+          str(c.status) === "LISTED" || str(c.status) === "SOLD"
+            ? (str(c.status) as "LISTED" | "SOLD")
+            : "STOCK",
+        soldPriceUsd: num(c.soldPriceUsd),
+        soldAt: date(c.soldAt),
+        notes: str(c.notes),
+        tags: str(c.tags),
       };
       const id = Number(c.id);
       if (Number.isInteger(id) && id > 0) {
