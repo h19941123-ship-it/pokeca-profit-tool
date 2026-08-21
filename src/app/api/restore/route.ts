@@ -106,7 +106,54 @@ export async function POST(request: Request): Promise<Response> {
       restored++;
     }
 
-    return Response.json({ ok: true, restoredCards: restored }, { headers: { "Cache-Control": "no-store" } });
+    // 相場ウォッチの復元。観測の記録は取り直せないので一緒に戻す。
+    // 既存と衝突しないよう、同じ検索語のものは作り直さず観測だけ足す。
+    let restoredWatches = 0;
+    const watches: Record<string, unknown>[] = Array.isArray(body.watches) ? body.watches : [];
+    for (const w of watches) {
+      const label = str(w.label);
+      const query = str(w.query);
+      if (!label || !query) continue;
+      const existing = await prisma.watch.findFirst({ where: { query } });
+      const watch =
+        existing ??
+        (await prisma.watch.create({
+          data: {
+            label,
+            query,
+            marketplaceId: str(w.marketplaceId) ?? "EBAY_US",
+            active: typeof w.active === "boolean" ? w.active : true,
+            note: str(w.note),
+          },
+        }));
+
+      const samples: Record<string, unknown>[] = Array.isArray(w.samples) ? w.samples : [];
+      for (const sm of samples) {
+        const observedAt = date(sm.observedAt);
+        if (!observedAt) continue;
+        // 同じ時刻の記録が既にあれば二重に入れない
+        const dup = await prisma.watchSample.findFirst({
+          where: { watchId: watch.id, observedAt },
+        });
+        if (dup) continue;
+        await prisma.watchSample.create({
+          data: {
+            watchId: watch.id,
+            observedAt,
+            medianUsd: num(sm.medianUsd),
+            minUsd: num(sm.minUsd),
+            maxUsd: num(sm.maxUsd),
+            listingCount: Math.round(num(sm.listingCount)),
+          },
+        });
+      }
+      restoredWatches++;
+    }
+
+    return Response.json(
+      { ok: true, restoredCards: restored, restoredWatches },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (err) {
     logger.error("バックアップ復元に失敗", err);
     return Response.json({ ok: false, error: "復元に失敗しました。ファイル形式をご確認ください。" }, { status: 500 });

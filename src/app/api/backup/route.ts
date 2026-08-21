@@ -8,15 +8,22 @@ import { logger } from "@/lib/logger";
 
 export async function GET(): Promise<Response> {
   try {
-    const [cards, settings] = await Promise.all([
+    const [cards, settings, watches] = await Promise.all([
       prisma.card.findMany({ orderBy: { id: "asc" } }),
       getSettings(),
+      // 観測の記録ごと持ち出す。相場の推移は取り直しがきかない
+      // （過去に遡って eBay の出品状況を調べることはできない）。
+      prisma.watch.findMany({
+        orderBy: { id: "asc" },
+        include: { samples: { orderBy: { observedAt: "asc" } } },
+      }),
     ]);
     const backup = {
       app: "pokeca-profit-tool",
       version: 1,
       exportedAt: new Date().toISOString(),
       settings,
+      watches,
       cards,
     };
     const json = JSON.stringify(backup, null, 2);

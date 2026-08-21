@@ -10,6 +10,8 @@
 //   「為替の変動」が混ざって、どちらが原因か分からなくなる。
 //   ここで測りたいのは前者なので、為替は揃えて価格の差だけを見る。
 
+import { median } from "@/lib/stats";
+
 /** ズレの向き。ON = 誤差の範囲内。 */
 export type ForecastVerdict = "OVER" | "UNDER" | "ON";
 
@@ -87,13 +89,7 @@ export interface ForecastSummary {
   reliable: boolean; // 件数が MIN_SAMPLES 以上か
 }
 
-/** 中央値。外れ値1件で結論が変わらないよう平均ではなく中央値を使う。 */
-export function median(values: number[]): number | null {
-  if (values.length === 0) return null;
-  const s = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(s.length / 2);
-  return s.length % 2 === 1 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
-}
+export { median } from "@/lib/stats";
 
 /** 複数件をまとめて傾向を出す。比較できない件は自動的に除く。 */
 export function summarizeForecast(

@@ -154,3 +154,45 @@ model PriceHistory {
 
   @@index([cardId, recordedAt])
 }
+
+// -----------------------------------------------------------------------------
+// Watch: 相場ウォッチの監視対象（手動で登録する）
+//   在庫として持っていないカードも狙えるよう、Card とは独立させる。
+//   query は eBay に投げる検索語。日本語カード名では当たらないので英語で入れる。
+// -----------------------------------------------------------------------------
+model Watch {
+  id Int @id @default(autoincrement())
+
+  label         String // 画面に出す名前（日本語で可）
+  query         String // eBay 検索キーワード（英語）
+  marketplaceId String  @default("EBAY_US")
+  active        Boolean @default(true) // 監視を一時停止できる
+  note          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  samples WatchSample[]
+
+  @@index([active])
+}
+
+// -----------------------------------------------------------------------------
+// WatchSample: 定点観測の1回分
+//   出品中の価格の中央値と「出品件数」を両方残すのが要点。
+//   値段が上がっても出品が増えているなら、売り手が強気になっただけかもしれない。
+//   値段が上がり かつ 出品が減っているときは、実際に買われている可能性が高い。
+// -----------------------------------------------------------------------------
+model WatchSample {
+  id      Int   @id @default(autoincrement())
+  watch   Watch @relation(fields: [watchId], references: [id], onDelete: Cascade)
+  watchId Int
+
+  observedAt   DateTime @default(now())
+  medianUsd    Float // 相場の目安。最安・平均より外れ値に強い
+  minUsd       Float
+  maxUsd       Float
+  listingCount Int // 出品件数
+
+  @@index([watchId, observedAt])
+}

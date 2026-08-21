@@ -257,6 +257,9 @@ function Shell({
               CSV出力
             </a>
           )}
+          <Link href="/watch" className="whitespace-nowrap text-sm text-blue-600 hover:underline">
+            相場ウォッチ
+          </Link>
           <Link href="/reports" className="whitespace-nowrap text-sm text-blue-600 hover:underline">
             レポート
           </Link>
