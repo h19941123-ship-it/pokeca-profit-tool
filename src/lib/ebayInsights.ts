@@ -4,6 +4,8 @@
 //  - これは「実売価格(sold)」。Browse API の「出品価格(asking)」とは別物。
 //  - Marketplace Insights は Limited Release（申請・審査が必要）。
 //    承認されると OAuth トークンに buy.marketplace.insights スコープが付与される。
+//    注意: invalid_scope は「未申請」と「申請済みで審査中」を区別できない。
+//    not_approved は「まだ使えない」以上の意味を持たせないこと。
 //  - 未承認だとトークン要求が invalid_scope で失敗する → not_approved として案内する。
 //  - 認証情報が無ければ no_credentials。いずれもアプリは壊さない。
 //

@@ -185,6 +185,14 @@ MVP は**外部 API キー不要**で動作します。必要な変数は `.env.
 リサーチ枠の「**実売価格**」タブは、eBay の **Marketplace Insights API** で落札実績を取得します。
 これは **Limited Release**（申請・審査が必要）で、承認されるまでは画面が「申請が必要」と案内します。
 
+> ℹ️ **現状は「未申請」です。** 下記の申請は行っていません。アプリが出す
+> `not_approved` は `invalid_scope`（キーセットにスコープが付いていない）を
+> 見ているだけで、申請済みで審査中なのか、そもそも申請していないのかは
+> 区別できません。**申請したかどうかは developer.ebay.com で確認してください。**
+>
+> なお Limited Release の審査は厳しく、個人の在庫管理ツールが通った例は
+> 多くありません。通らない前提で「出品価格」を使う設計にしてあります。
+
 1. https://developer.ebay.com/ にサインイン
 2. [Marketplace Insights API の概要・申請](https://developer.ebay.com/api-docs/buy/marketplace-insights/overview.html) から
    利用申請（Application Growth Check / Limited Release 申請）を行う
@@ -269,7 +277,7 @@ eBay API の利用上限に当たらないようにするためで、1日に何�
 
 ### 取れないもの
 
-- **落札実績（実売価格）** — Marketplace Insights API の承認待ち
+- **落札実績（実売価格）** — Marketplace Insights API が**未申請**（申請すれば審査に進めるが、個人ツールの承認例は少ない）
 - **国内の買取相場** — 買取チェッカーは robots.txt でこちらのアクセスを拒否しているため取得しません
 
 ## 予想と実績のズレ
