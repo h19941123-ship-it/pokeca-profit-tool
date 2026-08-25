@@ -48,13 +48,15 @@ export async function collectOne(watch: Watch): Promise<CollectOutcome> {
     return { ok: false, watchId: watch.id, reason: "出品が見つかりませんでした" };
   }
 
-  const { median, min, max, count } = res.summary;
+  const { median, min, max, count, currency } = res.summary;
   await prisma.watchSample.create({
     data: {
       watchId: watch.id,
       medianUsd: median,
       minUsd: min,
       maxUsd: max,
+      // 監視先が US 以外なら USD ではない。列名に引きずられて $ で出すと嘘になる。
+      currency,
       listingCount: count,
     },
   });

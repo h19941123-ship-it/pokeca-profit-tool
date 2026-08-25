@@ -23,3 +23,14 @@ describe("isDue（取り直す時期か）", () => {
     expect(isDue(new Date(NOW.getTime() - MIN_INTERVAL_MS), NOW)).toBe(true);
   });
 });
+
+describe("観測値の通貨", () => {
+  it("US以外のマーケットの値を $ で出さない", async () => {
+    const { money } = await import("@/lib/format");
+    // 列名は medianUsd だが、UK を監視すれば GBP で記録される。
+    // 以前はここも一律 $ で表示していて、£120 が $120 に見えていた。
+    expect(money(120, "USD")).toBe("$120");
+    expect(money(120, "GBP")).toBe("120 GBP");
+    expect(money(1500, "EUR")).toBe("1,500 EUR");
+  });
+});

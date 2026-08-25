@@ -13,6 +13,15 @@ export function usd(n: number): string {
 }
 
 /**
+ * 通貨つきの金額。US 以外のマーケットの観測値を $ で出すと嘘になるので、
+ * 観測時の通貨をそのまま添える。
+ */
+export function money(n: number, currency: string): string {
+  const amount = n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  return currency === "USD" ? `$${amount}` : `${amount} ${currency}`;
+}
+
+/**
  * パーセント表示。null は「—」。
  * 桁数を小数1桁に固定して、一覧で数字が縦にそろうようにする
  * （固定しないと 67.6% / 59% / -66.67% が混在して読みにくい）。

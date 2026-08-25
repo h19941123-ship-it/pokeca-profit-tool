@@ -11,7 +11,7 @@ import { buildEbaySearchUrl } from "@/lib/ebayLink";
 import { Sparkline } from "@/components/Sparkline";
 import { WatchForm } from "./WatchForm";
 import { deleteWatchAction, toggleWatchAction, refreshWatchesAction } from "./actions";
-import { usd, pct, ymd } from "@/lib/format";
+import { money, pct, ymd } from "@/lib/format";
 import { logger } from "@/lib/logger";
 
 export const metadata = { title: "相場ウォッチ | ポケカ利益判定ツール" };
@@ -137,13 +137,15 @@ export default async function WatchPage() {
 }
 
 type WatchWithSamples = Awaited<ReturnType<typeof prisma.watch.findMany>>[number] & {
-  samples: { observedAt: Date; medianUsd: number; listingCount: number }[];
+  samples: { observedAt: Date; medianUsd: number; listingCount: number; currency: string }[];
 };
 
 function WatchRow({ watch, trend }: { watch: WatchWithSamples; trend: TrendResult }) {
   // 推移は古い順に描く（DBからは新しい順で来る）
   const series = [...watch.samples].reverse().map((s) => s.medianUsd);
   const latest = watch.samples[0];
+  // 観測時の通貨で出す。列名は medianUsd だが US 以外なら USD ではない。
+  const currency = latest?.currency ?? "USD";
   const market = getMarketplace(watch.marketplaceId);
   const searchUrl = buildEbaySearchUrl(watch.query, { marketplace: watch.marketplaceId });
 
@@ -182,7 +184,11 @@ function WatchRow({ watch, trend }: { watch: WatchWithSamples; trend: TrendResul
         )}
       </td>
       <td className="px-3 py-2 text-right tabular-nums">
-        {trend.recentMedianUsd !== null ? usd(trend.recentMedianUsd) : latest ? usd(latest.medianUsd) : "—"}
+        {trend.recentMedianUsd !== null
+          ? money(trend.recentMedianUsd, currency)
+          : latest
+            ? money(latest.medianUsd, currency)
+            : "—"}
         {latest && (
           <div className="text-[11px] text-black/45 dark:text-white/45">{ymd(latest.observedAt)}</div>
         )}
