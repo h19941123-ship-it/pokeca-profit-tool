@@ -35,7 +35,7 @@ export async function POST(request: Request): Promise<Response> {
         data: {
           ebayFeePct: num(s.ebayFeePct, 0.13),
           ebayFixedFeeUsd: num(s.ebayFixedFeeUsd, 0.4),
-          paymentFeePct: num(s.paymentFeePct, 0.03),
+          paymentFeePct: num(s.paymentFeePct, 0),
           fxFeePct: num(s.fxFeePct, 0.02),
           tariffRatePct: num(s.tariffRatePct, 0),
           packingJpy: Math.round(num(s.packingJpy, 200)),
