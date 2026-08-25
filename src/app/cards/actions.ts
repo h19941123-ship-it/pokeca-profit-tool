@@ -6,11 +6,14 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
+import type { Card, Settings } from "@/generated/prisma/client";
 import { parseCardForm } from "@/lib/validation";
 import { getSettings } from "@/lib/settings";
-import { computeCardProfit } from "@/lib/cardProfit";
+import { computeCardProfit, buildSoldContext } from "@/lib/cardProfit";
 import { recordPriceHistory } from "@/lib/priceHistory";
 import { nextPredictedSellUsd } from "@/lib/forecast";
+import { nextSoldContext, parseSoldContext } from "@/lib/soldContext";
 import { parseImportText } from "@/lib/csvImport";
 import type { BuybackFormState } from "@/app/cards/buyback/buybackState";
 import { logger } from "@/lib/logger";
@@ -22,6 +25,31 @@ import type { ImportFormState } from "@/app/cards/import/importState";
  * @param _prev 直前の状態（useActionState から渡る。未使用）
  * @param formData 送信されたフォーム
  */
+/**
+ * 売却済になったカードに、その時点の手数料・為替を焼き付ける。
+ *
+ * 行を作ってから実施するのは、条件の組み立て（まとめ発送の按分など）が
+ * 保存後の Card を必要とするため。一度入った値は上書きしない。
+ */
+async function pinSoldContext(card: Card, settings: Settings): Promise<Card> {
+  const next = nextSoldContext({
+    current: card.soldContext,
+    nextStatus: card.status,
+    feeBase: buildSoldContext(card, settings),
+  });
+
+  const currentIsSet = parseSoldContext(card.soldContext) !== null;
+  // 売却済以外に戻ったら破棄する（また売るときの条件で取り直す）
+  if (next === null) {
+    return currentIsSet
+      ? prisma.card.update({ where: { id: card.id }, data: { soldContext: Prisma.DbNull } })
+      : card;
+  }
+  if (currentIsSet) return card;
+
+  return prisma.card.update({ where: { id: card.id }, data: { soldContext: next } });
+}
+
 export async function createCard(
   _prev: CardFormState,
   formData: FormData,
@@ -77,12 +105,15 @@ export async function createCard(
       },
     });
 
-    // 3) 利益プレビューを計算（登録直後に判定を見せる）
+    // 3) 売却済で登録されたなら、その時点の条件を固定する
     const settings = await getSettings();
-    const profit = computeCardProfit(card, settings);
+    const saved = await pinSoldContext(card, settings);
 
-    // 3.5) 価格履歴に記録（推移グラフ用）
-    await recordPriceHistory(card, settings);
+    // 4) 利益プレビューを計算（登録直後に判定を見せる）
+    const profit = computeCardProfit(saved, settings);
+
+    // 5) 価格履歴に記録（推移グラフ用）
+    await recordPriceHistory(saved, settings);
 
     // 4) 一覧のキャッシュを更新
     revalidatePath("/");
@@ -241,10 +272,12 @@ export async function updateCard(
     });
 
     const settings = await getSettings();
-    const profit = computeCardProfit(card, settings);
+    // 売却済になったこの瞬間の条件を固定する（既にあれば触らない）
+    const saved = await pinSoldContext(card, settings);
+    const profit = computeCardProfit(saved, settings);
 
     // 価格履歴に記録（推移グラフ用）
-    await recordPriceHistory(card, settings);
+    await recordPriceHistory(saved, settings);
 
     revalidatePath("/");
     revalidatePath(`/cards/${id}/edit`);

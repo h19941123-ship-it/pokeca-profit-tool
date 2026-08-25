@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings } from "@/lib/settings";
 import { logger } from "@/lib/logger";
+import { parseSoldContext } from "@/lib/soldContext";
 
 function num(v: unknown, d = 0): number {
   const n = Number(v);
@@ -94,6 +95,9 @@ export async function POST(request: Request): Promise<Response> {
             : "STOCK",
         soldPriceUsd: num(c.soldPriceUsd),
         soldAt: date(c.soldAt),
+      // 売却時点の手数料スナップショット。復元しないと過去の実現損益が
+      // 現在の設定で計算し直され、金額が変わってしまう。
+      soldContext: parseSoldContext(c.soldContext) ?? undefined,
         notes: str(c.notes),
         tags: str(c.tags),
       };

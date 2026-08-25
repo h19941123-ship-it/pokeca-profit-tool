@@ -7,6 +7,7 @@ import { maxPurchaseForRate, breakEvenSellUsd } from "@/lib/advice";
 import { compareChannels, type ChannelComparison } from "@/lib/channel";
 import { bundleShipping, type BundledShipping } from "@/lib/shipping";
 import type { ForecastItem } from "@/lib/forecast";
+import { parseSoldContext } from "@/lib/soldContext";
 
 /**
  * このカードの実質送料（まとめ発送の按分後）。画面の内訳表示にも使う。
@@ -77,10 +78,31 @@ export function computeCardAdvice(card: Card, settings: Settings): CardAdvice {
   };
 }
 
-/** 実現損益（売却済カード）。売却価格で利益を計算する。 */
-export function computeRealizedProfit(card: Card, settings: Settings): ProfitResult {
-  const inputs = buildProfitInputs(card, settings);
-  return calcProfit({ ...inputs, sellPriceUsd: card.soldPriceUsd });
+/**
+ * 実現損益（売却済カード）。
+ *
+ * 売却時点で固定した条件があればそれを使う。無いのは この機能より前に
+ * 売れたカードで、その場合だけ現在の設定で概算する（estimated=true）。
+ * 現在の設定で毎回計算し直すと、設定を触るたびに過去の実績が動く。
+ */
+export function computeRealizedProfit(
+  card: Card,
+  settings: Settings,
+): ProfitResult & { estimated: boolean } {
+  const snapshot = parseSoldContext(card.soldContext);
+  const inputs = snapshot
+    ? { ...snapshot, purchasePriceJpy: card.purchasePriceJpy, sellPriceUsd: card.soldPriceUsd }
+    : { ...buildProfitInputs(card, settings), sellPriceUsd: card.soldPriceUsd };
+
+  return { ...calcProfit(inputs), estimated: snapshot === null };
+}
+
+/** 売却時に固定する条件（仕入れ・販売価格を除いた計算前提）。 */
+export function buildSoldContext(card: Card, settings: Settings) {
+  const { purchasePriceJpy: _p, sellPriceUsd: _s, ...rest } = buildProfitInputs(card, settings);
+  void _p;
+  void _s;
+  return rest;
 }
 
 /** カード＋設定から「国内で売るか／海外に出すか」を比較する。 */

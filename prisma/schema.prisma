@@ -71,6 +71,9 @@ model Card {
   status      String    @default("STOCK") // STOCK(仕入済) / LISTED(出品中) / SOLD(売却済)
   soldPriceUsd Float    @default(0) // 実際に売れた価格（USD）
   soldAt      DateTime? // 売却日
+  // 売却確定時の手数料・為替条件のスナップショット（src/lib/soldContext.ts）。
+  // 無い＝この機能より前に売却したカード。実現損益は現在の設定での概算になる。
+  soldContext Json? // 売却時点の計算前提
 
   // --- メモ・タグ ---
   notes String? // 自由メモ

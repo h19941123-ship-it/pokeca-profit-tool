@@ -75,6 +75,12 @@ export default async function ReportsPage() {
 
       <section className="mb-8">
         <h2 className="mb-2 text-base font-semibold">月次 実現損益</h2>
+        {r.estimatedCount > 0 && (
+          <p className="mb-2 text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+            ⚠️ {r.estimatedCount}件は売却時点の手数料・為替が残っていないため、現在の設定で概算しています。
+            設定を変えるとこの分の金額は動きます（以後に売却したカードは当時の条件で固定されます）。
+          </p>
+        )}
         {r.monthly.length === 0 ? (
           <p className="text-sm text-black/50 dark:text-white/50">売却済のカードがありません（カードの「ステータス」を売却済にし、売却日・実売却額を入力）。</p>
         ) : (

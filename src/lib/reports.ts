@@ -26,6 +26,8 @@ export interface ForecastRow {
 }
 export interface ReportData {
   soldCount: number;
+  /** 売却時点の条件が残っておらず、現在の設定で概算した件数。 */
+  estimatedCount: number;
   realizedTotalJpy: number;
   monthly: MonthlyRow[];
   suppliers: SupplierRow[];
@@ -41,9 +43,12 @@ export function buildReports(cards: Card[], settings: Settings): ReportData {
   // 実現損益（売却済）
   const sold = cards.filter((c) => c.status === "SOLD");
   let realizedTotalJpy = 0;
+  let estimatedCount = 0;
   const monthMap = new Map<string, { profitJpy: number; count: number }>();
   for (const c of sold) {
-    const p = computeRealizedProfit(c, settings).profitJpy;
+    const realized = computeRealizedProfit(c, settings);
+    if (realized.estimated) estimatedCount += 1;
+    const p = realized.profitJpy;
     realizedTotalJpy += p;
     const key = c.soldAt ? ym(c.soldAt) : "不明";
     const m = monthMap.get(key) ?? { profitJpy: 0, count: 0 };
@@ -93,5 +98,5 @@ export function buildReports(cards: Card[], settings: Settings): ReportData {
     }))
     .sort((a, b) => (b.avgRatePct ?? -Infinity) - (a.avgRatePct ?? -Infinity));
 
-  return { soldCount: sold.length, realizedTotalJpy, monthly, suppliers, forecast, forecastRows };
+  return { soldCount: sold.length, estimatedCount, realizedTotalJpy, monthly, suppliers, forecast, forecastRows };
 }
