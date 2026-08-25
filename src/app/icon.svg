@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="ポケカ利益判定">
+  <defs>
+    <clipPath id="ball"><circle cx="256" cy="256" r="230"/></clipPath>
+  </defs>
+  <g clip-path="url(#ball)">
+    <rect x="0" y="0" width="512" height="256" fill="#ef4444"/>
+    <rect x="0" y="256" width="512" height="256" fill="#ffffff"/>
+    <rect x="0" y="236" width="512" height="40" fill="#111827"/>
+  </g>
+  <circle cx="256" cy="256" r="230" fill="none" stroke="#111827" stroke-width="20"/>
+  <circle cx="256" cy="256" r="70" fill="#ffffff" stroke="#111827" stroke-width="20"/>
+  <text x="256" y="286" font-family="Arial, sans-serif" font-size="86" font-weight="700" text-anchor="middle" fill="#2563eb">¥</text>
+</svg>
