@@ -60,8 +60,16 @@ export function calcGrading(inputs: GradingInputs): GradingResult {
   const psa10Sell = safeNum(inputs.psa10SellUsd);
   const psa9Sell = safeNum(inputs.psa9SellUsd);
 
-  // 鑑定シナリオが未入力（PSA価格が両方0）なら計算しない
-  const configured = psa10Sell > 0 || psa9Sell > 0;
+  // 鑑定シナリオが未入力なら計算しない。
+  //
+  // 確率も必須にする。schema の注記どおり psa10Prob=0 は「まだ調べていない」で
+  // あって「絶対に10は出ない」ではない。価格だけ入れて確率を入れ忘れると
+  // 「必ずPSA9で売れる」という前提で計算され、期待利益が −¥8,484 のような
+  // 断定的な数字で出てしまう。仕入れ0円を「未調査」として判定しない
+  // (profit.ts の Decision.UNSET) のと同じ理由。
+  const priceEntered = psa10Sell > 0 || psa9Sell > 0;
+  const probEntered = safeNum(inputs.psa10Prob) > 0;
+  const configured = priceEntered && probEntered;
 
   const gradingFeeJpy = Math.round(safeNum(inputs.gradingFeeUsd) * fx);
   const gradingTotalJpy = gradingFeeJpy + Math.round(safeNum(inputs.gradingShipJpy)) + Math.round(safeNum(inputs.gradingAgentJpy));

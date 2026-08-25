@@ -42,8 +42,28 @@ function splitLine(line: string, delim: "\t" | ","): string[] {
   return out;
 }
 
+/**
+ * 表計算から貼り付けた数値を読む。
+ *
+ * Number() をそのまま使うと、桁区切り・通貨記号・全角数字がすべて NaN に
+ * なって 0 に落ちる。しかも仕入 0 円は「まだ調べていない」の意味を持つため
+ * (profit.ts の Decision.UNSET)、8,000円のつもりが未設定として静かに
+ * 取り込まれ、取り込んだ本人も気づけない。
+ *
+ * スプレッドシート貼り付けは想定された使い方なので、そこで出る表記は
+ * 読めるようにする。読めない値は 0 のままにする（空欄と同じ扱い）。
+ */
 function num(v: string | undefined): number {
-  const n = Number((v ?? "").trim());
+  const raw = (v ?? "").trim();
+  if (!raw) return 0;
+
+  const normalized = raw
+    // 全角数字・記号を半角へ
+    .replace(/[０-９．，－]/g, (c) => "0123456789.,-"["０１２３４５６７８９．，－".indexOf(c)])
+    // 通貨記号と桁区切り、単位の空白を落とす
+    .replace(/[¥$€£,\s]/g, "");
+
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : 0;
 }
 function str(v: string | undefined): string | null {

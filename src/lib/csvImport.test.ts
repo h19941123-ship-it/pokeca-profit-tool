@@ -72,3 +72,33 @@ describe("画像URL列（9列目）", () => {
     expect(r.cards[0].imageUrl).toBe("https://example.com/b.webp");
   });
 });
+
+describe("表計算から貼り付けた数値表記", () => {
+  // 想定された使い方はスプレッドシートからの貼り付け。そこで普通に出る
+  // 表記が Number() で NaN → 0 に落ちていた。仕入 0 円は「未調査」の
+  // 意味を持つので、8,000円のつもりが未設定として静かに取り込まれる。
+  const purchaseOf = (cell: string) =>
+    parseImportText(`リザードン\t${cell}\t120`).cards[0].purchasePriceJpy;
+
+  it("桁区切りを読む", () => {
+    expect(purchaseOf("8,000")).toBe(8000);
+  });
+
+  it("通貨記号つきを読む", () => {
+    expect(purchaseOf("¥8,000")).toBe(8000);
+    expect(purchaseOf("$8000")).toBe(8000);
+  });
+
+  it("全角数字を読む", () => {
+    expect(purchaseOf("８０００")).toBe(8000);
+  });
+
+  it("小数を保つ", () => {
+    expect(parseImportText("リザードン\t8000\t$120.50").cards[0].sellPriceUsd).toBe(120.5);
+  });
+
+  it("読めない値は0のまま（空欄と同じ扱い）", () => {
+    expect(purchaseOf("abc")).toBe(0);
+    expect(purchaseOf("")).toBe(0);
+  });
+});

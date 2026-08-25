@@ -74,3 +74,41 @@ describe("calcGrading", () => {
     expect(r.worthGrading).toBe(false);
   });
 });
+
+describe("確率の入れ忘れ", () => {
+  it("PSA価格だけで確率が0なら未設定として扱う", () => {
+    // schema の注記どおり psa10Prob=0 は「まだ調べていない」。
+    // 以前は価格だけで configured=true になり、「必ずPSA9で売れる」前提の
+    // 期待利益（例: −¥8,484）が断定的に表示されていた。
+    const r = calcGrading({
+      base,
+      rawShippingJpy: 1800,
+      rawPurchaseJpy: 8000,
+      rawSellPriceUsd: 120,
+      gradingFeeUsd: 79.99,
+      gradingShipJpy: 2000,
+      gradingAgentJpy: 1000,
+      psa10SellUsd: 400,
+      psa9SellUsd: 130,
+      psa10Prob: 0,
+    });
+    expect(r.configured).toBe(false);
+    expect(r.worthGrading).toBe(false);
+  });
+
+  it("価格と確率がそろえば計算する", () => {
+    const r = calcGrading({
+      base,
+      rawShippingJpy: 1800,
+      rawPurchaseJpy: 8000,
+      rawSellPriceUsd: 120,
+      gradingFeeUsd: 79.99,
+      gradingShipJpy: 2000,
+      gradingAgentJpy: 1000,
+      psa10SellUsd: 400,
+      psa9SellUsd: 130,
+      psa10Prob: 30,
+    });
+    expect(r.configured).toBe(true);
+  });
+});
