@@ -34,7 +34,7 @@ describe("summarizePrices", () => {
       { title: "b", priceValue: 120, currency: "USD", condition: null, url: null },
       { title: "c", priceValue: 100, currency: "USD", condition: null, url: null },
     ]);
-    expect(s).toEqual({ count: 3, min: 80, max: 120, avg: 100, median: 100, currency: "USD" });
+    expect(s).toEqual({ count: 3, min: 80, max: 120, avg: 100, median: 100, currency: "USD", skipped: 0 });
   });
 
   it("空なら null", () => {
@@ -87,5 +87,21 @@ describe("summarizePrices の中央値", () => {
 
   it("1件でも落ちない", () => {
     expect(summarizePrices([listing(42)])!.median).toBe(42);
+  });
+
+  it("通貨が混ざったら多数派だけで集計する", () => {
+    // eBay は marketplace を指定しても出品者の通貨で返すことがある。
+    // 以前は先頭の通貨を代表に全件を平均していて、USD 2件に 15,000円が
+    // 1件混ざるだけで「平均 $5,060」になっていた。
+    const s = summarizePrices([
+      { title: "a", priceValue: 80, currency: "USD", condition: null, url: null },
+      { title: "b", priceValue: 100, currency: "USD", condition: null, url: null },
+      { title: "c", priceValue: 15000, currency: "JPY", condition: null, url: null },
+    ])!;
+    expect(s.currency).toBe("USD");
+    expect(s.count).toBe(2);
+    expect(s.avg).toBe(90);
+    expect(s.max).toBe(100);
+    expect(s.skipped).toBe(1);
   });
 });

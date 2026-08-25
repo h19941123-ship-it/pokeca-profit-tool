@@ -20,6 +20,8 @@ interface Summary {
   avg: number;
   median: number;
   currency: string;
+  /** 通貨が違って集計から外した件数。古い応答には無いので省略可。 */
+  skipped?: number;
 }
 interface DisplayItem {
   title: string;
@@ -185,12 +187,26 @@ export function EbayLookup({ defaultQuery = "" }: { defaultQuery?: string }) {
             <Stat label="平均" value={`${summary.currency} ${summary.avg}`} />
             <Stat label="最高" value={`${summary.currency} ${summary.max}`} />
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-black/50 dark:text-white/50">販売価格(USD)に反映:</span>
-            <button type="button" onClick={() => setSellPrice(summary.median)} className="rounded border border-blue-500/50 bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-300">中央値</button>
-            <button type="button" onClick={() => setSellPrice(summary.min)} className="rounded border border-black/15 px-2 py-1 hover:bg-black/[0.03] dark:border-white/20">最安</button>
-            <button type="button" onClick={() => setSellPrice(summary.avg)} className="rounded border border-black/15 px-2 py-1 hover:bg-black/[0.03] dark:border-white/20">平均</button>
-          </div>
+          {(summary.skipped ?? 0) > 0 && (
+            <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+              ⚠️ 通貨の違う出品が {summary.skipped} 件あったため集計から外しました（{summary.currency} のみで算出）。
+            </p>
+          )}
+          {/* 反映先は USD の欄。集計が別通貨のときに押せると、その数値が
+              そのまま USD として保存され、以後の利益計算が静かに狂う。 */}
+          {summary.currency === "USD" ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-black/50 dark:text-white/50">販売価格(USD)に反映:</span>
+              <button type="button" onClick={() => setSellPrice(summary.median)} className="rounded border border-blue-500/50 bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-300">中央値</button>
+              <button type="button" onClick={() => setSellPrice(summary.min)} className="rounded border border-black/15 px-2 py-1 hover:bg-black/[0.03] dark:border-white/20">最安</button>
+              <button type="button" onClick={() => setSellPrice(summary.avg)} className="rounded border border-black/15 px-2 py-1 hover:bg-black/[0.03] dark:border-white/20">平均</button>
+            </div>
+          ) : (
+            <p className="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+              集計は {summary.currency} です。販売価格の欄は USD なので、そのままは反映できません。
+              US マーケットで調べ直すか、手で換算して入力してください。
+            </p>
+          )}
           <p className="text-[11px] leading-relaxed text-black/45 dark:text-white/45">
             ※ 検索結果には状態の悪い品・別カード・まとめ売りが混ざります。
             最安は外れ値を拾いやすいので、目安には<b>中央値</b>が向いています。

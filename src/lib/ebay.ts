@@ -53,6 +53,8 @@ export interface PriceSummary {
    */
   median: number;
   currency: string;
+  /** 通貨が違うため集計から外した件数。0 以外なら表示側で断りを入れる。 */
+  skipped: number;
 }
 
 /** 検索結果（成功 / 認証なし / エラー）。 */
@@ -145,19 +147,39 @@ export function medianOf(values: number[]): number {
   return Math.round(m * 100) / 100;
 }
 
-/** 出品リストから最安・最高・平均・中央値・件数を集計する純粋関数。 */
-export function summarizePrices(listings: EbayListing[]): PriceSummary | null {
-  if (listings.length === 0) return null;
-  const values = listings.map((l) => l.priceValue);
+/**
+ * 同じ通貨の価格だけを集計する。
+ *
+ * eBay は marketplace を指定しても出品者の設定通貨で返すことがあり、
+ * 以前は先頭1件の通貨を代表として全件をそのまま平均していた。USD 2件に
+ * JPY 1件（15,000円）が混ざるだけで「平均 $5,060」になり、しかも例外は
+ * 出ない。件数が多い方の通貨だけを残し、落とした件数を skipped で返す。
+ */
+export function summarizeSameCurrency<T extends { priceValue: number; currency: string }>(
+  items: T[],
+): PriceSummary | null {
+  if (items.length === 0) return null;
+
+  const counts = new Map<string, number>();
+  for (const i of items) counts.set(i.currency, (counts.get(i.currency) ?? 0) + 1);
+  const [currency] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+
+  const values = items.filter((i) => i.currency === currency).map((i) => i.priceValue);
   const sum = values.reduce((a, b) => a + b, 0);
   return {
-    count: listings.length,
+    count: values.length,
     min: Math.min(...values),
     max: Math.max(...values),
     avg: Math.round((sum / values.length) * 100) / 100,
     median: medianOf(values),
-    currency: listings[0].currency,
+    currency,
+    skipped: items.length - values.length,
   };
+}
+
+/** 出品リストから最安・最高・平均・中央値・件数を集計する純粋関数。 */
+export function summarizePrices(listings: EbayListing[]): PriceSummary | null {
+  return summarizeSameCurrency(listings);
 }
 
 /**

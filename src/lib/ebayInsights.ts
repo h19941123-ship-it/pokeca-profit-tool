@@ -12,7 +12,7 @@
 // 環境変数は ebay.ts と共通（EBAY_APP_ID / EBAY_CERT_ID / EBAY_ENV / EBAY_MARKETPLACE_ID）。
 
 import { logger } from "@/lib/logger";
-import { hasEbayCredentials, type PriceSummary, medianOf } from "@/lib/ebay";
+import { hasEbayCredentials, type PriceSummary, summarizeSameCurrency } from "@/lib/ebay";
 import { toMarketplaceId } from "@/lib/marketplaces";
 
 const TIMEOUT_MS = 8000;
@@ -118,19 +118,9 @@ export function parseSoldItems(json: unknown): SoldItem[] {
   return items;
 }
 
-/** 落札実績から集計する純粋関数。 */
+/** 落札実績から集計する純粋関数。出品側と同じく通貨を揃えてから集計する。 */
 export function summarizeSold(items: SoldItem[]): PriceSummary | null {
-  if (items.length === 0) return null;
-  const values = items.map((i) => i.priceValue);
-  const sum = values.reduce((a, b) => a + b, 0);
-  return {
-    count: items.length,
-    min: Math.min(...values),
-    max: Math.max(...values),
-    avg: Math.round((sum / values.length) * 100) / 100,
-    median: medianOf(values),
-    currency: items[0].currency,
-  };
+  return summarizeSameCurrency(items);
 }
 
 /** 実売価格（落札実績）を検索する。 */
